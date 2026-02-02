@@ -1,0 +1,223 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User & Auth
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  password      String?   // For credentials auth
+  image         String?
+  role          Role      @default(VIEWER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  workspaces    WorkspaceMember[]
+  comments      Comment[]
+  modifiedRows  Row[]     @relation("RowLastModified")
+  
+  accounts      Account[]
+  sessions      Session[]
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+// NextAuth Models
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?
+  access_token       String?
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Workspace & Projects
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  projects  Project[]
+  members   WorkspaceMember[]
+}
+
+model WorkspaceMember {
+  id          String    @id @default(cuid())
+  userId      String
+  workspaceId String
+  role        Role      @default(VIEWER)
+  
+  user        User      @relation(fields: [userId], references: [id])
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+
+  @@unique([userId, workspaceId])
+  @@index([userId])
+  @@index([workspaceId])
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  workspaceId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sheets      Sheet[]
+  
+  @@index([workspaceId])
+}
+
+// Data Handling (Airtable-like)
+model Sheet {
+  id          String   @id @default(cuid())
+  name        String
+  projectId   String
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  columns     Column[]
+  rows        Row[]
+  views       View[]
+  
+  @@index([projectId])
+}
+
+model Column {
+  id          String   @id @default(cuid())
+  sheetId     String
+  name        String
+  type        ColumnType
+  options     Json?    // For select options, formatting, etc.
+  order       Int      @default(0)
+  width       Int      @default(200)
+
+  sheet       Sheet    @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+  
+  @@index([sheetId])
+}
+
+enum ColumnType {
+  TEXT
+  NUMBER
+  CURRENCY
+  DATE
+  CHECKBOX
+  SELECT
+  MULTI_SELECT
+  FILE
+  LONG_TEXT
+  USER
+  CREATED_BY
+  UPDATED_BY
+  AUTO_NUMBER
+}
+
+model Row {
+  id          String   @id @default(cuid())
+  sheetId     String
+  data        Json     // key: columnId, value: any
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  sheet       Sheet    @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+  lastModifiedById String?
+  lastModifiedBy   User?   @relation("RowLastModified", fields: [lastModifiedById], references: [id])
+  comments    Comment[]
+  history     RowHistory[]
+  
+  @@index([sheetId])
+}
+
+model RowHistory {
+  id        String   @id @default(cuid())
+  rowId     String
+  changedBy String   // User ID
+  change    Json     // What changed
+  createdAt DateTime @default(now())
+
+  row       Row      @relation(fields: [rowId], references: [id], onDelete: Cascade)
+  
+  @@index([rowId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  rowId     String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+
+  row       Row      @relation(fields: [rowId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+  
+  @@index([rowId])
+  @@index([userId])
+}
+
+model View {
+  id        String   @id @default(cuid())
+  sheetId   String
+  name      String
+  type      ViewType @default(GRID)
+  config    Json?    // Filters, sorts, hidden columns
+  
+  sheet     Sheet    @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+  
+  @@index([sheetId])
+}
+
+enum ViewType {
+  GRID
+  KANBAN
+  CALENDAR
+}

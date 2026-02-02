@@ -1,0 +1,5 @@
+Sheet: CGM PTS
+Columns: 'Name', 'Date in Dropbox', 'Completed', 'Voice Record', 'Clinical Notes', 'RX', 'No Match', 'Packing Slip', 'POD', 'notes', 'Tracking Number', 'Delivery Status', 'Delivered Date', 'Attachments', 'Returned', 'Medicare ID', 'DOB', 'Phone', 'Address', 'City', 'State', 'Zip Code', 'DR NAME', 'DR NPI NUMBER', 'Date of Appointment', 'DEVICE TYPE', 'Refill Due', 'RX Expires', 'Welcome Call Date', 'Satisfaction', 'Notes IBP', 'Notes Delta', 'JULY TRACKING', 'JULY RECEIVED DATE', 'AUG TRACKING', 'AUG RECEIVED DATE', 'SEPT TRACKING', 'SEPT RECEIVED DATE', 'OCT TRACKING', 'OCT RECEIVED DATE', 'NOV TRACKING', 'NOV RECEIVED DATE', 'DEC TRACKING', 'DEC RECEIVED DATE'
+
+Sheet: CGM PTS
+Columns: 'Delivered Date'
