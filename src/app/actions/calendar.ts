@@ -13,76 +13,61 @@ export interface CalendarEvent {
     resource?: any
     sheetId: string
     dateColumnId: string
+    fullData?: Record<string, any>
+    columns?: { id: string, name: string }[]
 }
 
 export async function getCalendarEvents(): Promise<CalendarEvent[]> {
     try {
-        // 1. Find the target sheet and columns
-        // Strategy: Look for a sheet named "Patient Sheet" (case insensitive)
-        // and find columns "Date Delivered" and "Patient Name"
-
-        // First, get all sheets with their columns
-        const sheets = await prisma.sheet.findMany({
-            include: {
-                columns: true
-            }
-        })
-
-        let targetSheet = sheets.find(s => s.name.toLowerCase().includes("patient"))
-
-        // If no specific "Patient" sheet, search for any sheet with "Date Delivered" column
-        if (!targetSheet) {
-            targetSheet = sheets.find(s =>
-                s.columns.some(c => c.name.toLowerCase() === "date delivered")
-            )
-        }
-
-        if (!targetSheet) {
-            console.log("No suitable sheet found for calendar")
-            return []
-        }
-
-        const dateColumn = targetSheet.columns.find(c => c.name.toLowerCase() === "date delivered")
-        const nameColumn = targetSheet.columns.find(c => c.name.toLowerCase().includes("patient") || c.name.toLowerCase() === "name")
-
-        if (!dateColumn) {
-            console.log("Date Delivered column not found")
-            return []
-        }
-
-        // 2. Fetch rows for the target sheet
-        const rows = await prisma.row.findMany({
-            where: {
-                sheetId: targetSheet.id
-            }
-        })
-
-        // 3. Map rows to events
         const events: CalendarEvent[] = []
+        const sheets = await prisma.sheet.findMany({ include: { columns: true } })
 
-        for (const row of rows) {
-            const data = row.data as Record<string, any>
-            const dateValue = data[dateColumn.id]
-            const nameValue = nameColumn ? data[nameColumn.id] : "Untitled"
+        for (const sheet of sheets) {
+            const sheetNameLower = sheet.name.toLowerCase()
+            let dateColumn = null
+            let nameColumn = sheet.columns.find(c =>
+                c.name.toLowerCase() === "name" ||
+                c.name.toLowerCase() === "patient name" ||
+                c.name.toLowerCase().includes("patient")
+            )
 
-            if (dateValue) {
-                const date = new Date(dateValue)
-                if (!isNaN(date.getTime())) {
-                    events.push({
-                        id: row.id,
-                        title: String(nameValue || "Unnamed Patient"),
-                        start: date,
-                        end: date, // Single day event usually
-                        allDay: true,
-                        sheetId: targetSheet.id,
-                        dateColumnId: dateColumn.id
-                    })
+            if (sheetNameLower.includes("cgm pts") || sheetNameLower.includes("cgm pst")) {
+                dateColumn = sheet.columns.find(c => c.name.toLowerCase() === "refill due")
+                if (!dateColumn) dateColumn = sheet.columns.find(c => c.name.toLowerCase() === "delivered date")
+            } else {
+                dateColumn = sheet.columns.find(c =>
+                    c.name.toLowerCase() === "delivered date" ||
+                    c.name.toLowerCase() === "date delivered"
+                )
+            }
+
+            if (dateColumn) {
+                const rows = await prisma.row.findMany({ where: { sheetId: sheet.id } })
+                for (const row of rows) {
+                    const data = row.data as Record<string, any>
+                    const dateValue = data[dateColumn.id]
+                    const nameValue = nameColumn ? data[nameColumn.id] : "Untitled"
+
+                    if (dateValue) {
+                        const date = new Date(dateValue)
+                        if (!isNaN(date.getTime())) {
+                            events.push({
+                                id: row.id,
+                                title: `Refill: ${String(nameValue || "Unnamed")}`,
+                                start: date,
+                                end: date,
+                                allDay: true,
+                                sheetId: sheet.id,
+                                dateColumnId: dateColumn.id,
+                                fullData: data,
+                                columns: sheet.columns.map(c => ({ id: c.id, name: c.name }))
+                            })
+                        }
+                    }
                 }
             }
         }
-
         return events
-
     } catch (error) {
         console.error("Error fetching calendar events:", error)
         return []
