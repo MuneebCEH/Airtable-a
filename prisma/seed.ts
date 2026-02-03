@@ -91,7 +91,7 @@ async function main() {
         { id: "zip", name: "Zip", type: "TEXT", width: 100 },
         { id: "dob", name: "DOB", type: "DATE", width: 120 },
         { id: "patientId", name: "Patient ID", type: "TEXT", width: 120 },
-        { id: "item", name: "Item", type: "TEXT", width: 150 },
+        { id: "productType", name: "Product Type", type: "TEXT", width: 150 },
         { id: "product", name: "Product", type: "SELECT", width: 150, options: ["L0457", "L1833", "L1906", "L3170"] },
         { id: "billed", name: "Billed", type: "CHECKBOX", width: 100 },
         { id: "paid", name: "Paid", type: "CURRENCY", width: 130 },

@@ -73,3 +73,18 @@ export async function deleteSheet(sheetId: string) {
     revalidatePath(`/projects/${sheet.projectId}`)
     return { success: true, projectId: sheet.projectId }
 }
+
+export async function renameColumn(columnId: string, newName: string, sheetId: string) {
+    try {
+        const column = await prisma.column.update({
+            where: { id: columnId },
+            data: { name: newName },
+            include: { sheet: true }
+        })
+        revalidatePath(`/projects/${column.sheet.projectId}`)
+        return { success: true }
+    } catch (error) {
+        console.error("Failed to rename column:", error)
+        return { success: false, error: "Failed to rename column" }
+    }
+}

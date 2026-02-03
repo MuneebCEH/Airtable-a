@@ -41,6 +41,26 @@ export async function updateRowData(rowId: string, data: any, sheetId?: string) 
                 }
             }
 
+            // --- SYNC DELIVERED DATE TO REFILL DUE ---
+            const refillDueCol = columns.find(c => c.name.toLowerCase() === 'refill due')
+            if (deliveredDateCol && refillDueCol) {
+                const deliveredDateVal = data[deliveredDateCol.id]
+                if (deliveredDateVal) {
+                    try {
+                        const date = new Date(deliveredDateVal)
+                        if (!isNaN(date.getTime())) {
+                            date.setDate(date.getDate() + 30)
+                            data[refillDueCol.id] = date.toISOString().split('T')[0]
+                        } else {
+                            data[refillDueCol.id] = deliveredDateVal
+                        }
+                    } catch (e) {
+                        data[refillDueCol.id] = deliveredDateVal
+                    }
+                }
+            }
+            // --- SYNC END ---
+
             // --- ATTACHMENT PROCESSING START ---
             const attachmentCol = columns.find(c => c.name.toLowerCase() === 'attachments' || c.type === 'FILE')
 
@@ -97,6 +117,96 @@ export async function updateRowData(rowId: string, data: any, sheetId?: string) 
                     }
                 }
             }
+            // --- ATTACHMENT PROCESSING END ---
+
+            // --- SYNC TO CGM PTS START ---
+            const productTypeCol = columns.find(c => c.name.toLowerCase() === 'product type')
+            const selection = productTypeCol ? data[productTypeCol.id] : null
+
+            if ((selection === 'CGM PTS' || selection === 'CGM PST') && !rowId.startsWith("ghost-")) {
+                const sheet = await prisma.sheet.findUnique({ where: { id: targetSheetId } })
+                if (sheet && sheet.name === 'Patients') {
+                    const existingRow = await prisma.row.findUnique({ where: { id: rowId } })
+                    const prevData = (existingRow?.data as any) || {}
+
+                    if (prevData[productTypeCol!.id] !== selection) {
+                        let cgmSheet = await prisma.sheet.findFirst({
+                            where: { name: 'CGM PTS', projectId: sheet.projectId }
+                        })
+                        if (!cgmSheet) {
+                            cgmSheet = await prisma.sheet.findFirst({
+                                where: { name: 'CGM PST', projectId: sheet.projectId }
+                            })
+                        }
+
+                        if (cgmSheet) {
+                            const cgmColumns = await prisma.column.findMany({ where: { sheetId: cgmSheet.id } })
+                            const combinedData = { ...prevData, ...data }
+                            const newRowData: any = {}
+
+                            // Map matching columns by name with overrides for existing CGM PTS structure
+                            const nameMapping: Record<string, string> = {
+                                'patient name': 'name',
+                                'dos': 'date of appointment',
+                                'complete': 'completed',
+                                'has voice record': 'voice record',
+                                'tracking': 'tracking number',
+                                'tracking status': 'delivery status',
+                                'dr name': 'dr name',
+                                'npi number': 'dr npi number',
+                                'notes': 'notes',
+                                'delivered date': 'delivered date'
+                            }
+
+                            for (const sourceCol of columns) {
+                                const sourceNameLower = sourceCol.name.toLowerCase()
+                                const targetName = nameMapping[sourceNameLower] || sourceNameLower
+                                const targetCol = cgmColumns.find(c => c.name.toLowerCase() === targetName)
+
+                                if (targetCol && combinedData[sourceCol.id] !== undefined) {
+                                    newRowData[targetCol.id] = combinedData[sourceCol.id]
+                                }
+                            }
+
+                            // Sync Delivered Date to Refill Due
+                            const deliveredDateCol = cgmColumns.find(c => c.name.toLowerCase() === 'delivered date')
+                            const refillDueCol = cgmColumns.find(c => c.name.toLowerCase() === 'refill due')
+                            if (deliveredDateCol && refillDueCol && newRowData[deliveredDateCol.id]) {
+                                try {
+                                    const date = new Date(newRowData[deliveredDateCol.id])
+                                    if (!isNaN(date.getTime())) {
+                                        date.setDate(date.getDate() + 30)
+                                        newRowData[refillDueCol.id] = date.toISOString().split('T')[0]
+                                    } else {
+                                        newRowData[refillDueCol.id] = newRowData[deliveredDateCol.id]
+                                    }
+                                } catch (e) {
+                                    newRowData[refillDueCol.id] = newRowData[deliveredDateCol.id]
+                                }
+                            }
+
+                            // Prevent duplicate sync for same patient name (Check 'Name' column)
+                            const patientNameCol = cgmColumns.find(c => c.name.toLowerCase() === 'name')
+                            let shouldCreate = true
+                            if (patientNameCol && newRowData[patientNameCol.id]) {
+                                const cgmRows = await prisma.row.findMany({ where: { sheetId: cgmSheet.id } })
+                                const isDuplicate = cgmRows.some(r => {
+                                    const rData = (r.data as any) || {}
+                                    return rData[patientNameCol.id] === newRowData[patientNameCol.id]
+                                })
+                                if (isDuplicate) shouldCreate = false
+                            }
+
+                            if (shouldCreate) {
+                                await prisma.row.create({
+                                    data: { sheetId: cgmSheet.id, data: newRowData, order: 0 }
+                                })
+                            }
+                        }
+                    }
+                }
+            }
+            // --- SYNC TO CGM PTS END ---
         }
 
         if (rowId.startsWith("ghost-")) {

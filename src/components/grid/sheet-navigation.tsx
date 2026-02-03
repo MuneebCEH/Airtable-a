@@ -58,7 +58,7 @@ export function SheetNavigation({ sheets, activeSheetId, onSheetChange, projectI
     }
 
     return (
-        <div className="flex items-center border-b bg-muted/40 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex items-center border-b bg-[#ffd66b] border-[#eeb44c]">
             <ScrollArea className="w-full whitespace-nowrap">
                 <div className="flex w-max space-x-1 p-2">
                     {sheets.map((sheet) => {
@@ -74,7 +74,7 @@ export function SheetNavigation({ sheets, activeSheetId, onSheetChange, projectI
                                     onBlur={saveRename}
                                     onKeyDown={(e) => e.key === "Enter" && saveRename()}
                                     autoFocus
-                                    className="w-32 h-9 my-auto"
+                                    className="w-32 h-9 my-auto bg-white text-black"
                                 />
                             )
                         }
@@ -87,10 +87,10 @@ export function SheetNavigation({ sheets, activeSheetId, onSheetChange, projectI
                                         onClick={() => onSheetChange(sheet.id)}
                                         onDoubleClick={() => startRename(sheet.id, sheet.name)}
                                         className={cn(
-                                            "inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
+                                            "inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
                                             isActive
-                                                ? "bg-background text-foreground shadow-sm shadow-black/5 dark:shadow-black/10"
-                                                : "text-muted-foreground bg-transparent"
+                                                ? "bg-white text-[#d97706] shadow-sm"
+                                                : "text-slate-800 hover:bg-[#fccb4f] hover:text-slate-900 bg-transparent"
                                         )}
                                     >
                                         {sheet.name}
@@ -99,9 +99,9 @@ export function SheetNavigation({ sheets, activeSheetId, onSheetChange, projectI
                                                 <div
                                                     role="button"
                                                     onClick={(e) => e.stopPropagation()}
-                                                    className="ml-2 p-0.5 rounded-sm hover:bg-muted-foreground/20 cursor-pointer"
+                                                    className="ml-2 p-0.5 rounded-sm hover:bg-sky-100 cursor-pointer"
                                                 >
-                                                    <ChevronDown className="h-3 w-3 opacity-50" />
+                                                    <ChevronDown className="h-3 w-3 text-[#d97706] opacity-70" />
                                                 </div>
                                             </DropdownMenuTrigger>
                                         )}
@@ -125,11 +125,11 @@ export function SheetNavigation({ sheets, activeSheetId, onSheetChange, projectI
                 </div>
                 <ScrollBar orientation="horizontal" className="h-2" />
             </ScrollArea>
-            <div className="flex items-center px-4 border-l bg-muted/10 h-10">
+            <div className="flex items-center px-4 border-l border-[#eeb44c] bg-amber-600/10 h-10">
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 rounded-full border border-dashed"
+                    className="h-6 w-6 rounded-full border border-dashed border-slate-600/50 text-slate-800 hover:bg-white/20 hover:text-slate-900"
                     onClick={handleAddSheet}
                 >
                     <span className="sr-only">Add Sheet</span>

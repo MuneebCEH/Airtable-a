@@ -14,6 +14,7 @@ import { useVirtualizer } from "@tanstack/react-virtual"
 // Import server action
 import { uploadFile } from "@/app/actions/upload"
 import { updateRowData } from "@/app/actions/rows"
+import { renameColumn } from "@/app/actions/sheets"
 import { GridColumn, GridRow } from "./types"
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
@@ -41,8 +42,17 @@ import {
     CheckSquare,
     Clock,
     UserPlus,
-    Hash as AutoNumberIcon
+    Hash as AutoNumberIcon,
+    Maximize2
 } from "lucide-react"
+
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
 
 // Editable cell renderer
 const EditableCell = ({
@@ -59,6 +69,7 @@ const EditableCell = ({
     const initialValue = getValue()
     const [value, setValue] = React.useState(initialValue)
     const [isUploading, setIsUploading] = React.useState(false)
+    const [isDialogOpen, setIsDialogOpen] = React.useState(false)
 
     // Sync with external data changes
     React.useEffect(() => {
@@ -136,25 +147,34 @@ const EditableCell = ({
             )
         case 'DATE':
             // Delivered Date is fully automated. Show text only, or empty if null.
-            // Matching column ID 'deliveredDate' or normalized name.
-            if (column.id === 'deliveredDate' || column.name.toLowerCase() === 'delivered date') {
+            if (column.id === 'deliveredDate' || column.name.toLowerCase() === 'delivered date' || column.name.toLowerCase() === 'refill due') {
                 return (
-                    <div className="flex items-center w-full h-full px-2 text-xs text-muted-foreground cursor-not-allowed bg-muted/20">
+                    <div className="flex items-center w-full h-full px-2 text-xs text-slate-700">
                         {value ? (value as string) : ""}
                     </div>
                 )
             }
 
             return (
-                <input
-                    type="date"
-                    className="w-full bg-transparent outline-none text-xs text-muted-foreground"
-                    value={value as string}
-                    onChange={(e) => {
-                        setValue(e.target.value)
-                        table.options.meta?.updateData(row.index, column.id, e.target.value)
-                    }}
-                />
+                <div className="relative w-full h-full flex items-center">
+                    <input
+                        type="date"
+                        className={cn(
+                            "w-full bg-transparent outline-none text-xs text-slate-700 px-2 h-full cursor-pointer",
+                            !value && "text-transparent" // Hide the dd/mm/yyyy native placeholder
+                        )}
+                        value={value as string || ""}
+                        onChange={(e) => {
+                            setValue(e.target.value)
+                            table.options.meta?.updateData(row.index, column.id, e.target.value)
+                        }}
+                    />
+                    {!value && (
+                        <div className="absolute inset-0 pointer-events-none flex items-center px-2 text-xs text-muted-foreground/0">
+                            {/* Empty space */}
+                        </div>
+                    )}
+                </div>
             )
         case 'SELECT':
             // User requested to remove dropdown for tracking status and keep it auto-filled
@@ -230,25 +250,164 @@ const EditableCell = ({
                     })}
                     <label className="cursor-pointer flex items-center justify-center p-1 hover:bg-muted rounded-md border border-dashed border-muted-foreground/30 min-w-7 h-7 transition-colors">
                         {isUploading ? (
-                            <div className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                            <div className="h-3 w-3 animate-spin rounded-full border-2 border-amber-600 border-t-transparent" />
                         ) : (
-                            <Plus className="h-3.5 w-3.5 text-muted-foreground hover:text-primary transition-colors" />
+                            <Plus className="h-3.5 w-3.5 text-muted-foreground hover:text-amber-600 transition-colors" />
                         )}
                         <input type="file" multiple className="hidden" onChange={handleFileUpload} />
                     </label>
                 </div>
             )
         }
+        case 'LONG_TEXT':
+            return (
+                <div className="relative group/cell w-full h-full flex items-center overflow-hidden">
+                    <input
+                        className="w-full bg-transparent outline-none px-2 text-sm h-full truncate"
+                        value={value as string}
+                        onChange={(e) => setValue(e.target.value)}
+                        onBlur={onBlur}
+                        onDoubleClick={() => setIsDialogOpen(true)}
+                    />
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            setIsDialogOpen(true)
+                        }}
+                        className="absolute right-1 opacity-0 group-hover/cell:opacity-100 p-1 bg-background/80 backdrop-blur-sm border rounded hover:bg-muted transition-opacity z-10 shadow-sm"
+                        title="Expand cell"
+                    >
+                        <Maximize2 className="h-3 w-3 text-amber-600" />
+                    </button>
+                    <Dialog open={isDialogOpen} onOpenChange={(open) => {
+                        if (!open) onBlur()
+                        setIsDialogOpen(open)
+                    }}>
+                        <DialogContent className="max-w-2xl">
+                            <DialogHeader className="border-b pb-2">
+                                <DialogTitle className="flex items-center gap-2 text-amber-700">
+                                    <FileText className="h-4 w-4" /> {column.name}
+                                </DialogTitle>
+                            </DialogHeader>
+                            <div className="pt-4">
+                                <Textarea
+                                    className="min-h-[300px] text-sm leading-relaxed focus-visible:ring-amber-500"
+                                    value={value as string}
+                                    onChange={(e) => setValue(e.target.value)}
+                                    onBlur={onBlur}
+                                    placeholder={`Enter ${column.name}...`}
+                                />
+                            </div>
+                        </DialogContent>
+                    </Dialog>
+                </div>
+            )
         default:
             return (
-                <input
-                    className="w-full bg-transparent outline-none px-2 text-sm h-full"
-                    value={value as string}
-                    onChange={(e) => setValue(e.target.value)}
-                    onBlur={onBlur}
-                />
+                <div className="relative group/cell w-full h-full flex items-center overflow-hidden">
+                    <input
+                        className="w-full bg-transparent outline-none px-2 text-sm h-full"
+                        value={value as string}
+                        onChange={(e) => setValue(e.target.value)}
+                        onBlur={onBlur}
+                        onDoubleClick={() => setIsDialogOpen(true)}
+                    />
+                    {typeof value === 'string' && value.length > 20 && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                setIsDialogOpen(true)
+                            }}
+                            className="absolute right-1 opacity-0 group-hover/cell:opacity-100 p-1 bg-background/80 backdrop-blur-sm border rounded hover:bg-muted transition-opacity z-10 shadow-sm"
+                            title="Expand cell"
+                        >
+                            <Maximize2 className="h-3 w-3 text-amber-600" />
+                        </button>
+                    )}
+                    <Dialog open={isDialogOpen} onOpenChange={(open) => {
+                        if (!open) onBlur()
+                        setIsDialogOpen(open)
+                    }}>
+                        <DialogContent className="max-w-2xl">
+                            <DialogHeader className="border-b pb-2">
+                                <DialogTitle className="flex items-center gap-2 text-amber-700">
+                                    <Type className="h-4 w-4" /> {column.name}
+                                </DialogTitle>
+                            </DialogHeader>
+                            <div className="pt-4">
+                                <Textarea
+                                    className="min-h-[300px] text-sm leading-relaxed focus-visible:ring-amber-500"
+                                    value={value as string}
+                                    onChange={(e) => setValue(e.target.value)}
+                                    onBlur={onBlur}
+                                    placeholder={`Enter ${column.name}...`}
+                                />
+                            </div>
+                        </DialogContent>
+                    </Dialog>
+                </div>
             )
     }
+}
+
+const ColumnHeader = ({
+    column,
+    sheetId,
+    getColumnIcon
+}: {
+    column: GridColumn,
+    sheetId: string,
+    getColumnIcon: (type: string) => React.ReactNode
+}) => {
+    const [name, setName] = React.useState(column.name)
+    const [isEditing, setIsEditing] = React.useState(false)
+
+    // Sync with external name changes
+    React.useEffect(() => {
+        setName(column.name)
+    }, [column.name])
+
+    const handleBlur = async () => {
+        setIsEditing(false)
+        if (name.trim() && name !== column.name) {
+            await renameColumn(column.id, name, sheetId)
+        } else {
+            setName(column.name)
+        }
+    }
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            (e.target as HTMLInputElement).blur()
+        }
+    }
+
+    return (
+        <div className="flex items-center gap-2 overflow-hidden w-full group/header">
+            <span className="text-amber-600 shrink-0">{getColumnIcon(column.type)}</span>
+            {isEditing ? (
+                <input
+                    autoFocus
+                    className="bg-white text-[11px] font-bold uppercase text-slate-900 outline-none w-full px-1 rounded-sm border border-amber-500 shadow-sm"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    onBlur={handleBlur}
+                    onKeyDown={handleKeyDown}
+                    onClick={(e) => e.stopPropagation()}
+                />
+            ) : (
+                <span
+                    className="text-[11px] font-bold uppercase text-slate-800 truncate tracking-tight cursor-text hover:bg-black/5 px-1 rounded-sm w-full transition-colors"
+                    onClick={(e) => {
+                        e.stopPropagation()
+                        setIsEditing(true)
+                    }}
+                >
+                    {name}
+                </span>
+            )}
+        </div>
+    )
 }
 
 interface DataTableProps {
@@ -299,14 +458,7 @@ export function DataTable({ columns: initialColumns, data: initialData, sheetId 
     const tableColumns = React.useMemo<ColumnDef<GridRow>[]>(() => {
         return initialColumns.map((col) => ({
             accessorKey: col.id,
-            header: ({ column }) => {
-                return (
-                    <div className="flex items-center gap-2 overflow-hidden">
-                        <span className="text-muted-foreground shrink-0">{getColumnIcon(col.type)}</span>
-                        <span className="text-[11px] font-medium uppercase text-muted-foreground truncate tracking-tight">{col.name}</span>
-                    </div>
-                )
-            },
+            header: ({ column }) => <ColumnHeader column={col} sheetId={sheetId} getColumnIcon={getColumnIcon} />,
             cell: ({ getValue, row, table }) => <EditableCell getValue={getValue} row={row} column={col} table={table} />,
             size: col.width || 150,
         }))
@@ -401,7 +553,7 @@ export function DataTable({ columns: initialColumns, data: initialData, sheetId 
             >
                 {/* Header - Sticky inside scroll container */}
                 <div
-                    className="flex bg-muted/50 font-medium text-muted-foreground sticky top-0 z-20 w-fit min-w-full border-b"
+                    className="flex bg-[#ffd66b] font-medium text-slate-900 sticky top-0 z-20 w-fit min-w-full border-b border-[#eeb44c]"
                     style={{
                         width: table.getTotalSize(),
                         minWidth: '100%'
@@ -412,7 +564,7 @@ export function DataTable({ columns: initialColumns, data: initialData, sheetId 
                             {headerGroup.headers.map(header => (
                                 <div
                                     key={header.id}
-                                    className="flex items-center px-3 py-2 border-r h-9 select-none shrink-0 bg-muted/50"
+                                    className="flex items-center px-3 py-2 border-r border-[#eeb44c] h-9 select-none shrink-0 bg-[#ffd66b] hover:bg-[#fccb4f] transition-colors"
                                     style={{ width: header.getSize() }}
                                 >
                                     {header.isPlaceholder
@@ -507,7 +659,7 @@ export function DataTable({ columns: initialColumns, data: initialData, sheetId 
                                         return <div key={i} className="text-red-600 dark:text-red-400 font-bold text-lg mb-4">{line}</div>
                                     }
                                     if (line.startsWith('🔍') || line.startsWith('📍') || line.startsWith('✍️')) {
-                                        return <div key={i} className="font-semibold text-primary mt-6 mb-2 flex items-center gap-2">{line}</div>
+                                        return <div key={i} className="font-semibold text-amber-600 mt-6 mb-2 flex items-center gap-2">{line}</div>
                                     }
                                     return <div key={i} className="mb-1">{line}</div>
                                 })}
@@ -519,7 +671,7 @@ export function DataTable({ columns: initialColumns, data: initialData, sheetId 
                             </div>
                             <button
                                 onClick={() => setAiAnalysisResult(null)}
-                                className="px-8 py-2.5 bg-primary text-primary-foreground rounded-lg font-semibold hover:ring-2 ring-primary/20 transition-all shadow-lg active:scale-95"
+                                className="px-8 py-2.5 bg-amber-600 text-white rounded-lg font-semibold hover:ring-2 ring-amber-500/20 transition-all shadow-lg active:scale-95"
                             >
                                 Done
                             </button>
