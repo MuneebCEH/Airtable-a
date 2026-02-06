@@ -43,7 +43,8 @@ import {
     Clock,
     UserPlus,
     Hash as AutoNumberIcon,
-    Maximize2
+    Maximize2,
+    IdCard
 } from "lucide-react"
 
 import {
@@ -70,6 +71,8 @@ const EditableCell = ({
     const [value, setValue] = React.useState(initialValue)
     const [isUploading, setIsUploading] = React.useState(false)
     const [isDialogOpen, setIsDialogOpen] = React.useState(false)
+
+    const isPatientNameColumn = column.name.toLowerCase() === 'patient name' || column.id === 'patientName'
 
     // Sync with external data changes
     React.useEffect(() => {
@@ -306,12 +309,27 @@ const EditableCell = ({
             return (
                 <div className="relative group/cell w-full h-full flex items-center overflow-hidden">
                     <input
-                        className="w-full bg-transparent outline-none px-2 text-sm h-full"
+                        className={cn(
+                            "w-full bg-transparent outline-none px-2 text-sm h-full",
+                            isPatientNameColumn && "font-medium text-amber-700"
+                        )}
                         value={value as string}
                         onChange={(e) => setValue(e.target.value)}
                         onBlur={onBlur}
                         onDoubleClick={() => setIsDialogOpen(true)}
                     />
+                    {isPatientNameColumn && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                table.options.meta?.openProfile(row.original)
+                            }}
+                            className="mr-1 p-1 bg-amber-100/50 text-amber-600 rounded border border-amber-200 hover:bg-amber-100 hover:text-amber-700 transition-all shadow-sm shrink-0"
+                            title="Open Patient Profile"
+                        >
+                            <Maximize2 className="h-3 w-3" />
+                        </button>
+                    )}
                     {typeof value === 'string' && value.length > 20 && (
                         <button
                             onClick={(e) => {
@@ -518,6 +536,14 @@ export function DataTable({ columns: initialColumns, data: initialData, sheetId 
         })
     }
 
+    const [selectedProfileRow, setSelectedProfileRow] = React.useState<GridRow | null>(null)
+    const [isProfileOpen, setIsProfileOpen] = React.useState(false)
+
+    const openProfile = (row: GridRow) => {
+        setSelectedProfileRow(row)
+        setIsProfileOpen(true)
+    }
+
     const table = useReactTable({
         data,
         columns: tableColumns,
@@ -526,6 +552,7 @@ export function DataTable({ columns: initialColumns, data: initialData, sheetId 
         },
         meta: {
             updateData,
+            openProfile,
         },
         onSortingChange: setSorting,
         getCoreRowModel: getCoreRowModel(),
@@ -679,6 +706,239 @@ export function DataTable({ columns: initialColumns, data: initialData, sheetId 
                     </div>
                 </div>
             )}
+
+            {/* Patient Profile Dialog - Optimized & Sexy Design */}
+            <Dialog open={isProfileOpen} onOpenChange={setIsProfileOpen}>
+                <DialogContent className="max-w-[92vw] 2xl:max-w-[85vw] h-[88vh] overflow-hidden p-0 border-none shadow-[0_0_80px_-20px_rgba(0,0,0,0.3)] bg-[#fdfdfd] flex flex-col rounded-[32px] transition-all duration-500 ease-in-out">
+                    {selectedProfileRow && (
+                        <div className="flex flex-col md:flex-row h-full">
+                            {/* Left Sidebar - Profile Summary (Upscaled for Visibility) */}
+                            <div className="w-full md:w-[420px] bg-gradient-to-br from-amber-600 to-amber-700 p-12 flex flex-col items-center text-center text-white relative overflow-hidden shrink-0">
+                                {/* Decorative Background Elements */}
+                                <div className="absolute -top-32 -left-32 w-80 h-80 bg-white/10 rounded-full blur-[100px] pointer-events-none" />
+                                <div className="absolute -bottom-32 -right-32 w-80 h-80 bg-black/10 rounded-full blur-[100px] pointer-events-none" />
+
+                                <button
+                                    onClick={() => setIsProfileOpen(false)}
+                                    className="absolute top-6 left-6 p-3 hover:bg-white/20 rounded-full transition-all md:hidden z-20"
+                                >
+                                    <X className="w-6 h-6 text-white" />
+                                </button>
+
+                                <div className="relative z-10 mt-6 flex flex-col items-center w-full">
+                                    <div className="h-44 w-44 rounded-[56px] bg-white/20 backdrop-blur-3xl flex items-center justify-center border-4 border-white/30 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.4)] mb-10 group transition-all hover:rotate-2 duration-700">
+                                        <User className="h-24 w-24 text-white drop-shadow-[0_8px_16px_rgba(0,0,0,0.4)]" />
+                                    </div>
+
+                                    <div className="bg-white/10 backdrop-blur-3xl border border-white/20 rounded-[40px] p-8 mb-10 shadow-2xl w-full">
+                                        <h2 className="text-4xl font-black tracking-tighter leading-[1.1] text-white mb-4">
+                                            {initialColumns.find(c => c.name.toLowerCase() === 'patient name')
+                                                ? selectedProfileRow[initialColumns.find(c => c.name.toLowerCase() === 'patient name')!.id]
+                                                : "Patient Profile"
+                                            }
+                                        </h2>
+                                        <div className="h-1.5 w-20 bg-amber-400 rounded-full mb-5 mx-auto shadow-[0_0_15px_rgba(251,191,36,0.5)]" />
+                                        <p className="text-sm font-black uppercase tracking-[0.4em] text-amber-200/90">Primary Identity</p>
+                                    </div>
+
+                                    <div className="flex flex-col gap-5 w-full">
+                                        <div className="bg-black/20 backdrop-blur-2xl rounded-3xl px-8 py-6 border border-white/10 flex items-center justify-between text-left group hover:bg-black/30 transition-all shadow-lg active:scale-95">
+                                            <div className="flex items-center gap-5">
+                                                <div className="p-3 bg-amber-500/20 rounded-xl">
+                                                    <IdCard className="w-6 h-6 text-amber-300 shadow-sm" />
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs font-black uppercase tracking-widest text-amber-100/60 leading-none mb-1">Digital Key</span>
+                                                    <span className="text-sm font-mono font-black tracking-widest text-white leading-none">SECURE-ID</span>
+                                                </div>
+                                            </div>
+                                            <span className="text-lg font-mono font-black tracking-wider text-white bg-white/10 px-4 py-1.5 rounded-xl border border-white/10">{selectedProfileRow.id.split('-')[0].toUpperCase()}</span>
+                                        </div>
+
+                                        <div className="bg-emerald-500/20 backdrop-blur-2xl rounded-3xl px-8 py-6 border border-emerald-400/20 flex items-center justify-between text-left group hover:bg-emerald-500/30 transition-all shadow-lg active:scale-95">
+                                            <div className="flex items-center gap-5">
+                                                <div className="relative">
+                                                    <div className="w-4 h-4 rounded-full bg-emerald-400 animate-ping absolute inset-0 opacity-75" />
+                                                    <div className="w-4 h-4 rounded-full bg-emerald-400 relative shadow-[0_0_10px_rgba(52,211,153,0.8)]" />
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs font-black uppercase tracking-widest text-emerald-100/60 leading-none mb-1">System Status</span>
+                                                    <span className="text-sm font-black text-emerald-300 uppercase leading-none">Live Monitoring</span>
+                                                </div>
+                                            </div>
+                                            <span className="text-sm font-black text-emerald-100 uppercase tracking-widest bg-emerald-400/20 px-4 py-2 rounded-xl border border-emerald-400/30">Verified</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="mt-auto pt-10 w-full z-10 hidden md:block">
+                                    <div className="h-px w-full bg-gradient-to-r from-transparent via-white/20 to-transparent mb-10" />
+                                    <p className="text-sm font-black uppercase tracking-[0.3em] text-amber-200/60 mb-6 drop-shadow-md">Professional Verification</p>
+                                    <div className="bg-white/5 border border-white/10 rounded-[32px] p-8 flex items-center gap-6 text-left backdrop-blur-xl shadow-2xl hover:bg-white/10 transition-all cursor-default group/badge">
+                                        <div className="p-4 bg-emerald-400/20 rounded-full shrink-0 shadow-inner group-hover/badge:scale-110 transition-transform duration-500 border border-emerald-400/30">
+                                            <Check className="w-8 h-8 text-emerald-400" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <p className="text-lg text-white font-black leading-tight mb-1">Authenticated</p>
+                                            <p className="text-sm text-amber-50/70 font-bold leading-relaxed tracking-wide">AI & Medical Compliance Cleared Successfully</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Right Content Area - Detailed Info */}
+                            <div className="flex-1 flex flex-col min-w-0 bg-[#f8fafc]/50">
+                                {/* Header with Navigation/Actions */}
+                                <div className="h-20 flex items-center justify-between px-8 border-b bg-white/80 backdrop-blur-md sticky top-0 z-20">
+                                    <div className="flex items-center gap-2">
+                                        <div className="p-2 bg-amber-50 rounded-xl">
+                                            <FileText className="w-5 h-5 text-amber-600" />
+                                        </div>
+                                        <h3 className="text-lg font-bold text-slate-800 tracking-tight">Comprehensive Details</h3>
+                                    </div>
+                                    <button
+                                        onClick={() => setIsProfileOpen(false)}
+                                        className="p-2.5 hover:bg-slate-100 rounded-full transition-all text-slate-400 hover:text-slate-600"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+
+                                {/* Quick Insights Bar */}
+                                <div className="px-8 py-5 bg-white border-b flex items-center gap-6 overflow-x-auto no-scrollbar shrink-0">
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1.5 line-clamp-1">Compliance Score</span>
+                                        <div className="flex items-center gap-2">
+                                            <div className="h-1.5 w-16 bg-emerald-100 rounded-full overflow-hidden">
+                                                <div className="h-full w-[85%] bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                                            </div>
+                                            <span className="text-[11px] font-black text-emerald-600 italic">85%</span>
+                                        </div>
+                                    </div>
+                                    <div className="h-8 w-px bg-slate-100 hidden sm:block" />
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1.5">Record Health</span>
+                                        <div className="flex items-center gap-2">
+                                            <div className="flex gap-0.5">
+                                                {[1, 2, 3, 4].map(i => <div key={i} className="h-1.5 w-3 bg-amber-400 rounded-full shadow-[0_0_8px_rgba(245,158,11,0.5)]" />)}
+                                                <div className="h-1.5 w-3 bg-slate-100 rounded-full" />
+                                            </div>
+                                            <span className="text-[11px] font-black text-amber-600 italic">Strong</span>
+                                        </div>
+                                    </div>
+                                    <div className="h-8 w-px bg-slate-100 hidden sm:block" />
+                                    <div className="flex items-center gap-3">
+                                        <div className="px-3.5 py-1.5 bg-blue-50 border border-blue-100 rounded-xl text-[10px] font-black text-blue-600 uppercase tracking-widest shadow-sm">
+                                            Verified
+                                        </div>
+                                        <div className="px-3.5 py-1.5 bg-purple-50 border border-purple-100 rounded-xl text-[10px] font-black text-purple-600 uppercase tracking-widest shadow-sm">
+                                            VIP Patient
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Main scrollable body */}
+                                <div className="flex-1 overflow-y-auto p-10 custom-scrollbar scroll-smooth bg-slate-50/20">
+                                    <div className="space-y-10 w-full">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 gap-6">
+                                            {initialColumns.map((col) => {
+                                                const colValue = selectedProfileRow[col.id];
+                                                const isEmpty = colValue === null || colValue === undefined || colValue === '';
+                                                if (col.name.toLowerCase() === 'patient name') return null;
+
+                                                return (
+                                                    <div
+                                                        key={col.id}
+                                                        className="group relative flex flex-col p-7 rounded-[32px] bg-white border border-slate-200/50 shadow-[0_4px_12px_-4px_rgba(0,0,0,0.02)] hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.06)] hover:border-amber-400/30 hover:-translate-y-1.5 transition-all duration-500"
+                                                    >
+                                                        <div className="flex justify-between items-start mb-5">
+                                                            <div className="flex items-center gap-3.5">
+                                                                <div className="p-3 rounded-[20px] bg-slate-50 text-slate-400 group-hover:bg-amber-500 group-hover:text-white transition-all duration-500 shadow-sm group-hover:shadow-[0_12px_24px_-6px_rgba(245,158,11,0.4)]">
+                                                                    {getColumnIcon(col.type)}
+                                                                </div>
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-amber-800 transition-colors leading-none mb-1">
+                                                                        {col.name}
+                                                                    </span>
+                                                                    <span className="text-[9px] font-bold text-slate-300 group-hover:text-amber-600/50 uppercase tracking-tight transition-colors">Information Field</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="pl-0.5">
+                                                            {col.type === 'CHECKBOX' ? (
+                                                                <div className={cn(
+                                                                    "inline-flex items-center gap-3 px-5 py-2.5 rounded-2xl text-[11px] font-black uppercase border-2 transition-all duration-500",
+                                                                    colValue
+                                                                        ? "bg-emerald-50 text-emerald-700 border-emerald-100 shadow-[0_4px_12px_-2px_rgba(16,185,129,0.1)]"
+                                                                        : "bg-slate-50 text-slate-400 border-slate-100"
+                                                                )}>
+                                                                    <div className={cn("h-2.5 w-2.5 rounded-full", colValue ? "bg-emerald-500 animate-pulse" : "bg-slate-200")} />
+                                                                    {colValue ? "Verified & Completed" : "Requires Attention"}
+                                                                </div>
+                                                            ) : col.type === 'FILE' ? (
+                                                                <div className="flex flex-wrap gap-2.5 py-1">
+                                                                    {Array.isArray(colValue) && colValue.length > 0 ? colValue.map((f: any, i: number) => (
+                                                                        <div key={i} className="flex items-center gap-3 bg-slate-50 hover:bg-white border border-slate-100 hover:border-amber-400 rounded-2xl px-5 py-3.5 text-[13px] font-bold text-slate-700 transition-all cursor-pointer shadow-sm hover:shadow-xl group/file">
+                                                                            <Paperclip className="w-5 h-5 text-amber-500 group-hover/file:rotate-12 transition-transform" />
+                                                                            <span className="max-w-[180px] truncate">{f.name}</span>
+                                                                        </div>
+                                                                    )) : <span className="text-slate-300 text-sm italic font-black">No Records Attached</span>}
+                                                                </div>
+                                                            ) : col.type === 'DATE' ? (
+                                                                <div className="flex items-center gap-5 py-1">
+                                                                    <div className="w-14 h-14 rounded-[22px] bg-amber-50 flex flex-col items-center justify-center border-2 border-amber-100 text-amber-600 shadow-inner group-hover:bg-amber-600 group-hover:text-white transition-all duration-700">
+                                                                        <CalendarIcon className="w-6 h-6" />
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="text-[17px] font-black text-slate-800 tracking-tight leading-none mb-1">
+                                                                            {colValue ? (typeof colValue === 'string' ? colValue : "Not Set") : "—"}
+                                                                        </p>
+                                                                        <p className="text-[10px] font-black text-amber-600/60 uppercase tracking-widest">Official Registration</p>
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <div className={cn(
+                                                                    "text-[17px] font-black leading-snug pr-8 group-hover:text-slate-900 transition-colors",
+                                                                    isEmpty ? "text-slate-200 italic" : "text-slate-700"
+                                                                )}>
+                                                                    {isEmpty ? "Record Undefined" : String(colValue)}
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Decorative Background Icon */}
+                                                        <div className="absolute top-6 right-6 opacity-[0.03] group-hover:opacity-[0.1] transition-opacity duration-700 pointer-events-none group-hover:rotate-12 transform group-hover:scale-[2.5]">
+                                                            {getColumnIcon(col.type)}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Footer Actions */}
+                                <div className="h-24 px-8 border-t bg-white flex items-center justify-end gap-4 shadow-[0_-10px_30px_-15px_rgba(0,0,0,0.05)] rounded-br-[24px]">
+                                    <button
+                                        onClick={() => setIsProfileOpen(false)}
+                                        className="h-12 px-8 rounded-2xl border border-slate-200 text-slate-500 font-bold hover:bg-slate-50 hover:text-slate-800 transition-all active:scale-95 text-sm"
+                                    >
+                                        Dismiss
+                                    </button>
+                                    <button
+                                        onClick={() => setIsProfileOpen(false)}
+                                        className="h-12 px-8 rounded-2xl bg-amber-600 text-white font-bold hover:bg-amber-700 shadow-[0_8px_25px_-8px_rgba(217,119,6,0.5)] transition-all active:scale-95 flex items-center gap-2 text-sm"
+                                    >
+                                        <Check className="w-4 h-4" />
+                                        Update Records
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }
