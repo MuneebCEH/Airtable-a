@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import {
     Avatar,
     AvatarFallback,
@@ -46,9 +47,11 @@ export function UserNav() {
                         Profile
                         <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
-                        Settings
-                        <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
+                    <DropdownMenuItem asChild>
+                        <Link href="/settings" className="w-full cursor-pointer">
+                            Settings
+                            <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
+                        </Link>
                     </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />

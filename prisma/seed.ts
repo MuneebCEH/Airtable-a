@@ -63,6 +63,46 @@ async function main() {
                 order: index,
             }
         })
+
+        // Add specific columns for CGM PTS
+        if (name === "CGM PTS" || name === "CGM PST") {
+            const cgmCols = [
+                { name: "Name", type: "TEXT" },
+                { name: "Date in Dropbox", type: "DATE" },
+                { name: "Completed", type: "CHECKBOX" },
+                { name: "Voice Record", type: "CHECKBOX" },
+                { name: "Clinical Notes", type: "CHECKBOX" },
+                { name: "RX", type: "CHECKBOX" },
+                { name: "No Match", type: "CHECKBOX" },
+                { name: "Packing Slip", type: "CHECKBOX" },
+                { name: "POD", type: "CHECKBOX" },
+                { name: "Notes", type: "LONG_TEXT" },
+                { name: "Tracking Number", type: "TEXT" },
+                { name: "Delivery Status", type: "SELECT", options: ["Delivered", "In Transit", "Pending", "Exception", "Label Created"] },
+                { name: "Delivered Date", type: "DATE" },
+                { name: "Refill Due", type: "DATE" },
+                { name: "Attachments", type: "FILE" },
+                { name: "Returned", type: "CHECKBOX" },
+                { name: "Medicare ID", type: "TEXT" },
+                { name: "DOB", type: "DATE" },
+                { name: "Address", type: "TEXT" },
+                { name: "City", type: "TEXT" },
+                { name: "State", type: "TEXT" },
+                { name: "Zip Code", type: "TEXT" },
+            ]
+            for (const [ci, c] of cgmCols.entries()) {
+                await prisma.column.create({
+                    data: {
+                        sheetId: s.id,
+                        name: c.name,
+                        type: c.type as any,
+                        order: ci,
+                        width: 150,
+                        options: (c as any).options
+                    }
+                })
+            }
+        }
         sheets.push(s)
     }
 
@@ -91,6 +131,7 @@ async function main() {
         { id: "zip", name: "Zip", type: "TEXT", width: 100 },
         { id: "dob", name: "DOB", type: "DATE", width: 120 },
         { id: "patientId", name: "Patient ID", type: "TEXT", width: 120 },
+        { id: "item", name: "Item", type: "TEXT", width: 150 },
         { id: "productType", name: "Product Type", type: "TEXT", width: 150 },
         { id: "product", name: "Product", type: "SELECT", width: 150, options: ["L0457", "L1833", "L1906", "L3170"] },
         { id: "billed", name: "Billed", type: "CHECKBOX", width: 100 },
@@ -107,6 +148,7 @@ async function main() {
         { id: "lastModifiedBy", name: "Last Modified By", type: "USER", width: 160 },
         { id: "reasonForReturn", name: "Reason for Return", type: "SELECT", width: 180, options: ["BAD STATE", "SNS FAILED", "No Answer"] },
         { id: "summaryState", name: "Summary (State)", type: "TEXT", width: 300 },
+        { id: "refillDue", name: "Refill Due", type: "DATE", width: 130 },
     ]
 
     for (const [index, col] of columnsData.entries()) {

@@ -17,7 +17,7 @@ model User {
   email         String    @unique
   password      String?   // For credentials auth
   image         String?
-  role          Role      @default(VIEWER)
+  role          Role      @default(AGENT)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   
@@ -32,8 +32,8 @@ model User {
 enum Role {
   OWNER
   ADMIN
-  EDITOR
-  VIEWER
+  MANAGER
+  AGENT
 }
 
 // NextAuth Models
@@ -90,7 +90,7 @@ model WorkspaceMember {
   id          String    @id @default(cuid())
   userId      String
   workspaceId String
-  role        Role      @default(VIEWER)
+  role        Role      @default(AGENT)
   
   user        User      @relation(fields: [userId], references: [id])
   workspace   Workspace @relation(fields: [workspaceId], references: [id])

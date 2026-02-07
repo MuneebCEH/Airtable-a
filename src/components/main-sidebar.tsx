@@ -312,6 +312,13 @@ export function MainSidebar({ className }: SidebarProps) {
                             active={pathname === "/admin/backups"}
                             collapsed={isCollapsed}
                         />
+                        <SidebarItem
+                            href="/settings"
+                            icon={<Settings className="h-4 w-4" />}
+                            label="Settings"
+                            active={pathname === "/settings"}
+                            collapsed={isCollapsed}
+                        />
                     </div>
                 </div>
             </ScrollArea>

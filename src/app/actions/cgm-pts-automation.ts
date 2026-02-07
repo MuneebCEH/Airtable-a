@@ -24,7 +24,6 @@ const mapping: Record<string, string[]> = {
 };
 
 export async function syncCgmPtsSheet(projectId: string) {
-    console.log(`Syncing CGM PTS sheet for project: ${projectId}`);
     try {
         const patientsSheet = await prisma.sheet.findFirst({
             where: { projectId, name: "Patients" },
@@ -34,29 +33,42 @@ export async function syncCgmPtsSheet(projectId: string) {
             where: { projectId, name: "CGM PTS" },
             include: { columns: { orderBy: { order: 'asc' } }, rows: true }
         });
+
         if (!patientsSheet || !cgmSheet) return;
-        const itemCol = patientsSheet.columns.find(c => c.name.toLowerCase() === 'item');
-        if (!itemCol) return;
+
+        // Find the column that determines sync (Product Type or Item)
+        const typeCol = patientsSheet.columns.find(c =>
+            ['product type', 'product', 'item'].includes(c.name.toLowerCase())
+        );
+
+        if (!typeCol) return;
+
         const patientsToSync = patientsSheet.rows.filter(row => {
             const data = row.data as Record<string, any>;
-            const val = data[itemCol.id];
-            return typeof val === 'string' && (val.toUpperCase() === 'CGM PTS' || val.toUpperCase() === 'CGM PST');
+            const val = data[typeCol.id];
+            return typeof val === 'string' && (val.toUpperCase().trim() === 'CGM PTS' || val.toUpperCase().trim() === 'CGM PST');
         });
+
         await prisma.row.deleteMany({ where: { sheetId: cgmSheet.id } });
+
         const patientCols = patientsSheet.columns;
         const cgmCols = cgmSheet.columns;
+
         for (let i = 0; i < patientsToSync.length; i++) {
             const pRow = patientsToSync[i];
             const pData = pRow.data as Record<string, any>;
             const newData: Record<string, any> = {};
+
             for (const [targetName, sourceNames] of Object.entries(mapping)) {
                 const tCol = cgmCols.find(c => c.name.toLowerCase() === targetName.toLowerCase());
                 if (!tCol) continue;
+
                 const sCol = patientCols.find(c => sourceNames.some(sn => sn.toLowerCase() === c.name.toLowerCase()));
                 if (sCol && pData[sCol.id] !== undefined) {
                     newData[tCol.id] = pData[sCol.id];
                 }
             }
+
             await prisma.row.create({
                 data: { sheetId: cgmSheet.id, data: newData, order: i }
             });

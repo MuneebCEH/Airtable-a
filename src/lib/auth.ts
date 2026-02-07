@@ -34,23 +34,32 @@ export const authOptions: NextAuthOptions = {
                     return null
                 }
 
-                // For this demo, we might not have a real password hash in seed, 
-                // so we'll check if it matches directly or via bcrypt if formatted as hash.
-                // In production, ALWAYS use bcrypt.compare.
-                // Here we'll assume the seed data might use plain text for simplicity in demo or hashes.
-                // Let's assume we use bcrypt.
-                // const isPasswordValid = await compare(credentials.password, user.password)
-
-                // For the sake of the "Deliverable" without a running DB, we'll simulate success if password matches
-                // In real app:
-                // if (!isPasswordValid) return null
-
-                return {
-                    id: user.id,
-                    email: user.email,
-                    name: user.name,
-                    role: user.role,
+                // Try bcrypt first
+                try {
+                    const isPasswordValid = await compare(credentials.password, user.password)
+                    if (isPasswordValid) {
+                        return {
+                            id: user.id,
+                            email: user.email,
+                            name: user.name,
+                            role: user.role,
+                        }
+                    }
+                } catch (e) {
+                    console.error("Bcrypt comparison failed:", e)
                 }
+
+                // Fallback for plain text (compatibility with old seed data)
+                if (credentials.password === user.password) {
+                    return {
+                        id: user.id,
+                        email: user.email,
+                        name: user.name,
+                        role: user.role,
+                    }
+                }
+
+                return null
             }
         })
     ],

@@ -120,8 +120,10 @@ export async function updateRowData(rowId: string, data: any, sheetId?: string) 
             // --- ATTACHMENT PROCESSING END ---
 
             // --- SYNC TO CGM PTS START ---
-            const productTypeCol = columns.find(c => c.name.toLowerCase() === 'product type')
-            const selection = productTypeCol ? data[productTypeCol.id] : null
+            const productTypeCol = columns.find(c =>
+                ['product type', 'product', 'item'].includes(c.name.toLowerCase())
+            )
+            const selection = productTypeCol ? (data[productTypeCol.id] as string)?.trim() : null
 
             if ((selection === 'CGM PTS' || selection === 'CGM PST') && !rowId.startsWith("ghost-")) {
                 const sheet = await prisma.sheet.findUnique({ where: { id: targetSheetId } })

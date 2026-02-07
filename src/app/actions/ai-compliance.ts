@@ -49,7 +49,7 @@ export async function processAttachmentCompliance(filePath: string) {
 
         const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" }); // Reverting to original working model
 
-        console.log(`Processing with Gemini: ${absolutePath}`);
+
 
         const mimeType = isPdf ? "application/pdf" : "image/jpeg";
 
@@ -67,7 +67,7 @@ export async function processAttachmentCompliance(filePath: string) {
 
         if (!aiResponse) return { success: false, error: "AI failed to respond. Check if the PDF is too large." };
 
-        console.log("Gemini Response received");
+
 
         // Extract JSON data
         let extractedData = null;
