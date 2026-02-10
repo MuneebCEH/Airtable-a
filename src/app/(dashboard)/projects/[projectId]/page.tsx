@@ -41,7 +41,7 @@ export default async function ProjectPage({ params, searchParams }: PageProps) {
             where: { id: activeSheetId },
             include: {
                 columns: { orderBy: { order: 'asc' } },
-                rows: { orderBy: { order: 'asc' } },
+                rows: { orderBy: { updatedAt: 'desc' } },
                 views: { orderBy: { name: 'asc' } } // Fetch views if needed
             }
         })

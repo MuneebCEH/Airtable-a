@@ -59,7 +59,6 @@ export async function updateRowData(rowId: string, data: any, sheetId?: string) 
                     }
                 }
             }
-            // --- SYNC END ---
 
             // --- ATTACHMENT PROCESSING START ---
             const attachmentCol = columns.find(c => c.name.toLowerCase() === 'attachments' || c.type === 'FILE')
@@ -85,7 +84,6 @@ export async function updateRowData(rowId: string, data: any, sheetId?: string) 
 
                             if (result.success && result.extractedData) {
                                 const ext = result.extractedData as any;
-
                                 const colMap: Record<string, string> = {};
                                 columns.forEach(c => colMap[c.name.toLowerCase()] = c.id);
 
@@ -100,8 +98,6 @@ export async function updateRowData(rowId: string, data: any, sheetId?: string) 
                                 setIfCol("Patient Name", ext.patient_name)
                                 setIfCol("DOB", ext.dob)
                                 setIfCol("DOS", ext.date_of_appointment)
-
-                                // Populate Notes with the AI analysis
                                 setIfCol("Notes", result.analysis)
 
                                 if (result.analysis) {
@@ -117,98 +113,32 @@ export async function updateRowData(rowId: string, data: any, sheetId?: string) 
                     }
                 }
             }
-            // --- ATTACHMENT PROCESSING END ---
 
-            // --- SYNC TO CGM PTS START ---
+            // --- SYNC TO SPECIAL SHEETS START ---
             const productTypeCol = columns.find(c =>
                 ['product type', 'product', 'item'].includes(c.name.toLowerCase())
             )
             const selection = productTypeCol ? (data[productTypeCol.id] as string)?.trim() : null
 
-            if ((selection === 'CGM PTS' || selection === 'CGM PST') && !rowId.startsWith("ghost-")) {
-                const sheet = await prisma.sheet.findUnique({ where: { id: targetSheetId } })
-                if (sheet && sheet.name === 'Patients') {
-                    const existingRow = await prisma.row.findUnique({ where: { id: rowId } })
-                    const prevData = (existingRow?.data as any) || {}
+            if (selection && !rowId.startsWith("ghost-")) {
+                const targetSheetName = (selection === 'CGM PTS' || selection === 'CGM PST') ? 'CGM PTS' :
+                    (selection === 'BRX PTs') ? 'BRX PTs' : null;
 
-                    if (prevData[productTypeCol!.id] !== selection) {
-                        let cgmSheet = await prisma.sheet.findFirst({
-                            where: { name: 'CGM PTS', projectId: sheet.projectId }
-                        })
-                        if (!cgmSheet) {
-                            cgmSheet = await prisma.sheet.findFirst({
-                                where: { name: 'CGM PST', projectId: sheet.projectId }
-                            })
-                        }
+                if (targetSheetName) {
+                    const sheet = await prisma.sheet.findUnique({ where: { id: targetSheetId } })
+                    // Only sync if we are in the Patients sheet
+                    if (sheet && sheet.name === 'Patients') {
+                        const existingRow = await prisma.row.findUnique({ where: { id: rowId } })
+                        const prevData = (existingRow?.data as any) || {}
 
-                        if (cgmSheet) {
-                            const cgmColumns = await prisma.column.findMany({ where: { sheetId: cgmSheet.id } })
-                            const combinedData = { ...prevData, ...data }
-                            const newRowData: any = {}
-
-                            // Map matching columns by name with overrides for existing CGM PTS structure
-                            const nameMapping: Record<string, string> = {
-                                'patient name': 'name',
-                                'dos': 'date of appointment',
-                                'complete': 'completed',
-                                'has voice record': 'voice record',
-                                'tracking': 'tracking number',
-                                'tracking status': 'delivery status',
-                                'dr name': 'dr name',
-                                'npi number': 'dr npi number',
-                                'notes': 'notes',
-                                'delivered date': 'delivered date'
-                            }
-
-                            for (const sourceCol of columns) {
-                                const sourceNameLower = sourceCol.name.toLowerCase()
-                                const targetName = nameMapping[sourceNameLower] || sourceNameLower
-                                const targetCol = cgmColumns.find(c => c.name.toLowerCase() === targetName)
-
-                                if (targetCol && combinedData[sourceCol.id] !== undefined) {
-                                    newRowData[targetCol.id] = combinedData[sourceCol.id]
-                                }
-                            }
-
-                            // Sync Delivered Date to Refill Due
-                            const deliveredDateCol = cgmColumns.find(c => c.name.toLowerCase() === 'delivered date')
-                            const refillDueCol = cgmColumns.find(c => c.name.toLowerCase() === 'refill due')
-                            if (deliveredDateCol && refillDueCol && newRowData[deliveredDateCol.id]) {
-                                try {
-                                    const date = new Date(newRowData[deliveredDateCol.id])
-                                    if (!isNaN(date.getTime())) {
-                                        date.setDate(date.getDate() + 30)
-                                        newRowData[refillDueCol.id] = date.toISOString().split('T')[0]
-                                    } else {
-                                        newRowData[refillDueCol.id] = newRowData[deliveredDateCol.id]
-                                    }
-                                } catch (e) {
-                                    newRowData[refillDueCol.id] = newRowData[deliveredDateCol.id]
-                                }
-                            }
-
-                            // Prevent duplicate sync for same patient name (Check 'Name' column)
-                            const patientNameCol = cgmColumns.find(c => c.name.toLowerCase() === 'name')
-                            let shouldCreate = true
-                            if (patientNameCol && newRowData[patientNameCol.id]) {
-                                const cgmRows = await prisma.row.findMany({ where: { sheetId: cgmSheet.id } })
-                                const isDuplicate = cgmRows.some(r => {
-                                    const rData = (r.data as any) || {}
-                                    return rData[patientNameCol.id] === newRowData[patientNameCol.id]
-                                })
-                                if (isDuplicate) shouldCreate = false
-                            }
-
-                            if (shouldCreate) {
-                                await prisma.row.create({
-                                    data: { sheetId: cgmSheet.id, data: newRowData, order: 0 }
-                                })
-                            }
+                        if (prevData[productTypeCol!.id] !== selection) {
+                            // This only copies the data to the target sheet, it does NOT delete or move the original row
+                            await syncRowToSpecialSheet(rowId, { ...prevData, ...data }, targetSheetId, columns, targetSheetName)
                         }
                     }
                 }
             }
-            // --- SYNC TO CGM PTS END ---
+            // --- SYNC TO SPECIAL SHEETS END ---
         }
 
         if (rowId.startsWith("ghost-")) {
@@ -233,11 +163,10 @@ export async function updateRowData(rowId: string, data: any, sheetId?: string) 
 
         revalidatePath("/projects/[projectId]")
 
-        // Return with AI Analysis metadata if present (stripped from saved data)
         const result: any = { success: true, row: updatedRow }
         if ((data as any)._aiAnalysisTemp) result.aiAnalysis = (data as any)._aiAnalysisTemp
         if ((data as any)._aiErrorTemp) {
-            result.success = false // or keep true but warn?
+            result.success = false
             result.isAiError = true
             result.error = (data as any)._aiErrorTemp
         }
@@ -249,6 +178,125 @@ export async function updateRowData(rowId: string, data: any, sheetId?: string) 
     }
 }
 
+async function syncRowToSpecialSheet(rowId: string, combinedData: any, targetSheetId: string, columns: any[], targetSheetName: string) {
+    const sheet = await prisma.sheet.findUnique({ where: { id: targetSheetId } })
+    if (!sheet) return
+
+    let destinationSheet = await prisma.sheet.findFirst({
+        where: { name: targetSheetName, projectId: sheet.projectId }
+    })
+
+    // Fallback for CGM PTS/PST if specifically requested
+    if (!destinationSheet && targetSheetName === 'CGM PTS') {
+        destinationSheet = await prisma.sheet.findFirst({
+            where: { name: 'CGM PST', projectId: sheet.projectId }
+        })
+    }
+
+    if (destinationSheet) {
+        const destColumns = await prisma.column.findMany({ where: { sheetId: destinationSheet.id } })
+        const newRowData: any = {}
+
+        const nameMapping: Record<string, string> = {
+            'patient name': 'name',
+            'dos': 'date of appointment',
+            'complete': 'completed',
+            'has voice record': 'voice record',
+            'tracking': 'tracking number',
+            'tracking status': 'delivery status',
+            'dr name': 'dr name',
+            'npi number': 'dr npi number',
+            'notes': 'notes',
+            'delivered date': 'delivered date'
+        }
+
+        for (const sourceCol of columns) {
+            const sourceNameLower = sourceCol.name.toLowerCase()
+            const targetName = nameMapping[sourceNameLower] || sourceNameLower
+            const targetCol = destColumns.find(c => c.name.toLowerCase() === targetName)
+
+            if (targetCol && combinedData[sourceCol.id] !== undefined) {
+                newRowData[targetCol.id] = combinedData[sourceCol.id]
+            }
+        }
+
+        const deliveredDateCol = destColumns.find(c => c.name.toLowerCase() === 'delivered date')
+        const refillDueCol = destColumns.find(c => c.name.toLowerCase() === 'refill due')
+        if (deliveredDateCol && refillDueCol && newRowData[deliveredDateCol.id]) {
+            try {
+                const date = new Date(newRowData[deliveredDateCol.id])
+                if (!isNaN(date.getTime())) {
+                    date.setDate(date.getDate() + 30)
+                    newRowData[refillDueCol.id] = date.toISOString().split('T')[0]
+                } else {
+                    newRowData[refillDueCol.id] = newRowData[deliveredDateCol.id]
+                }
+            } catch (e) {
+                newRowData[refillDueCol.id] = newRowData[deliveredDateCol.id]
+            }
+        }
+
+        const patientNameCol = destColumns.find(c => c.name.toLowerCase() === 'name')
+        let shouldCreate = true
+        if (patientNameCol && newRowData[patientNameCol.id]) {
+            const destRows = await prisma.row.findMany({ where: { sheetId: destinationSheet.id } })
+            const isDuplicate = destRows.some(r => {
+                const rData = (r.data as any) || {}
+                return rData[patientNameCol.id] === newRowData[patientNameCol.id]
+            })
+            if (isDuplicate) shouldCreate = false
+        }
+
+        if (shouldCreate) {
+            await prisma.row.create({
+                data: { sheetId: destinationSheet.id, data: newRowData, order: 0 }
+            })
+        }
+    }
+}
+
+export async function bulkMoveToSpecialSheet(sheetId: string, rowIds: string[], targetSheetName: string) {
+    try {
+        const columns = await prisma.column.findMany({ where: { sheetId } })
+        const productTypeCol = columns.find(c =>
+            ['product type', 'product', 'item'].includes(c.name.toLowerCase())
+        )
+
+        if (!productTypeCol) return { success: false, error: "Product Type column not found" }
+
+        for (const rowId of rowIds) {
+            const row = await prisma.row.findUnique({ where: { id: rowId } })
+            if (!row) continue
+
+            const currentData = row.data as any || {}
+            // Normalize "CGM PTS" for the column value if needed, or use the exact sheet name
+            const val = targetSheetName === 'CGM PTS' ? 'CGM PTS' : 'BRX PTs'
+            const newData = { ...currentData, [productTypeCol.id]: val }
+
+            await prisma.row.update({
+                where: { id: rowId },
+                data: { data: newData }
+            })
+
+            await syncRowToSpecialSheet(rowId, newData, sheetId, columns, targetSheetName)
+        }
+
+        revalidatePath("/projects/[projectId]", "layout")
+        return { success: true }
+    } catch (error) {
+        console.error(`Bulk move to ${targetSheetName} failed:`, error)
+        return { success: false, error: (error as Error).message }
+    }
+}
+
+export async function bulkMoveToCgmPts(sheetId: string, rowIds: string[]) {
+    return bulkMoveToSpecialSheet(sheetId, rowIds, 'CGM PTS')
+}
+
+export async function bulkMoveToBrxPts(sheetId: string, rowIds: string[]) {
+    return bulkMoveToSpecialSheet(sheetId, rowIds, 'BRX PTs')
+}
+
 export async function createRow(sheetId: string, initialData: any = {}) {
     try {
         const row = await prisma.row.create({ data: { sheetId, data: initialData, order: 0 } })
@@ -257,5 +305,44 @@ export async function createRow(sheetId: string, initialData: any = {}) {
     } catch (error) {
         console.error("Failed to create row:", error)
         return { success: false } as any
+    }
+}
+
+export async function bulkCreateRows(sheetId: string, rowsData: any[]) {
+    try {
+        console.log(`Starting bulk import of ${rowsData.length} rows for sheet ${sheetId}`)
+
+        const result = await prisma.row.createMany({
+            data: rowsData.map((data, index) => ({
+                sheetId,
+                data: data as any,
+                order: index
+            }))
+        })
+
+        console.log(`Successfully imported ${result.count} rows`)
+        revalidatePath("/projects/[projectId]", "layout")
+        return { success: true, count: result.count }
+    } catch (error) {
+        console.error("CRITICAL: Bulk creation failed:", error)
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : "Bulk creation failed"
+        }
+    }
+}
+
+export async function deleteRows(rowIds: string[]) {
+    try {
+        await prisma.row.deleteMany({
+            where: {
+                id: { in: rowIds }
+            }
+        })
+        revalidatePath("/projects/[projectId]", "layout")
+        return { success: true }
+    } catch (error) {
+        console.error("Failed to delete rows:", error)
+        return { success: false, error: "Deletion failed" }
     }
 }

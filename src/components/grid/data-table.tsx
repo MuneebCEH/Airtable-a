@@ -432,9 +432,19 @@ interface DataTableProps {
     columns: GridColumn[]
     data: GridRow[]
     sheetId: string
+    isSelectionMode: boolean
+    selectedRowIds: string[]
+    setSelectedRowIds: React.Dispatch<React.SetStateAction<string[]>>
 }
 
-export function DataTable({ columns: initialColumns, data: initialData, sheetId }: DataTableProps) {
+export function DataTable({
+    columns: initialColumns,
+    data: initialData,
+    sheetId,
+    isSelectionMode,
+    selectedRowIds,
+    setSelectedRowIds
+}: DataTableProps) {
     const [data, setData] = React.useState(initialData)
     const [sorting, setSorting] = React.useState<SortingState>([])
 
@@ -472,19 +482,60 @@ export function DataTable({ columns: initialColumns, data: initialData, sheetId 
         }
     }
 
-    // Convert GridColumn to TanStack ColumnDef
+    // Convert GridColumn to TanStack ColumnDef with Selection Column if needed
     const tableColumns = React.useMemo<ColumnDef<GridRow>[]>(() => {
-        return initialColumns.map((col) => ({
+        const cols: ColumnDef<GridRow>[] = []
+
+        // Add selection column only in selection mode
+        if (isSelectionMode) {
+            cols.push({
+                id: "selection",
+                header: ({ table }) => (
+                    <div className="flex items-center justify-center w-full h-full">
+                        <Checkbox
+                            checked={table.getIsAllPageRowsSelected()}
+                            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+                            aria-label="Select all"
+                            className="bg-white border-amber-500 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                        />
+                    </div>
+                ),
+                cell: ({ row }) => {
+                    const isGhost = row.original.id.startsWith("ghost-")
+                    if (isGhost) return null
+
+                    return (
+                        <div className="flex items-center justify-center w-full h-full">
+                            <Checkbox
+                                checked={row.getIsSelected()}
+                                onCheckedChange={(value) => row.toggleSelected(!!value)}
+                                aria-label="Select row"
+                                className="border-amber-400 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                            />
+                        </div>
+                    )
+                },
+                size: 40,
+                enableSorting: false,
+                enableHiding: false,
+            })
+        }
+
+        const dataCols = initialColumns.map((col) => ({
             accessorKey: col.id,
             header: ({ column }) => <ColumnHeader column={col} sheetId={sheetId} getColumnIcon={getColumnIcon} />,
             cell: ({ getValue, row, table }) => <EditableCell getValue={getValue} row={row} column={col} table={table} />,
             size: col.width || 150,
         }))
-    }, [initialColumns])
+
+        return [...cols, ...dataCols]
+    }, [initialColumns, isSelectionMode, sheetId])
 
     const [aiAnalysisResult, setAiAnalysisResult] = React.useState<string | null>(null)
 
     const updateData = (rowIndex: number, columnId: string, value: any) => {
+        if (isSelectionMode) return // Prevent editing in selection mode
+
         setData((old) => {
             const currentRow = old[rowIndex]
             if (!currentRow) return old
@@ -506,7 +557,6 @@ export function DataTable({ columns: initialColumns, data: initialData, sheetId 
             if (rowId) {
                 updateRowData(rowId, { [columnId]: value }, sheetId).then(res => {
                     if (res.success && res.row) {
-                        // ... existing success logic
                         setData(prev => prev.map((r, idx) => {
                             if (idx === rowIndex) {
                                 return {
@@ -518,7 +568,6 @@ export function DataTable({ columns: initialColumns, data: initialData, sheetId 
                             return r
                         }))
 
-                        // Show AI Analysis in a popup if present
                         if ((res as any).aiAnalysis) {
                             setAiAnalysisResult((res as any).aiAnalysis)
                         }
@@ -544,12 +593,32 @@ export function DataTable({ columns: initialColumns, data: initialData, sheetId 
         setIsProfileOpen(true)
     }
 
+    const [rowSelection, setRowSelection] = React.useState({})
+
+    // Sync TanStack row selection with our selectedRowIds
+    React.useEffect(() => {
+        const ids = Object.keys(rowSelection)
+            .map(idx => data[Number(idx)]?.id)
+            .filter(id => id && !id.startsWith("ghost-"))
+        setSelectedRowIds(ids as string[])
+    }, [rowSelection, data, setSelectedRowIds])
+
+    // Reset selection when exiting mode
+    React.useEffect(() => {
+        if (!isSelectionMode) {
+            setRowSelection({})
+        }
+    }, [isSelectionMode])
+
     const table = useReactTable({
         data,
         columns: tableColumns,
         state: {
             sorting,
+            rowSelection,
         },
+        enableRowSelection: isSelectionMode,
+        onRowSelectionChange: setRowSelection,
         meta: {
             updateData,
             openProfile,
@@ -558,6 +627,7 @@ export function DataTable({ columns: initialColumns, data: initialData, sheetId 
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
+        getRowId: (row, index) => index.toString(), // Important for indices in rowSelection
     })
 
     // Virtualization

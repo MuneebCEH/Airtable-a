@@ -164,105 +164,15 @@ async function main() {
         })
     }
 
-    // 6. Create Simple Sample Rows for Patients
+    // 6. Create Simple Sample Rows for Patients (Removed as per user request to start with empty data)
+    /*
     const columns = await prisma.column.findMany({ where: { sheetId: patientsSheet.id } })
     const colMap = columns.reduce((acc, col) => ({ ...acc, [col.name]: col.id }), {} as Record<string, string>)
 
-    // Mock Row 1
-    await prisma.row.create({
-        data: {
-            sheetId: patientsSheet.id,
-            order: 0,
-            data: {
-                [colMap['Patient Name']]: 'John Doe',
-                [colMap['DOS']]: '2025-01-20',
-                [colMap['Returned']]: false,
-                [colMap['Complete']]: true,
-                [colMap['Packing Slip']]: true,
-                [colMap['Has Voice Record']]: true,
-                [colMap['RX']]: true,
-                [colMap['Clinical Notes']]: true,
-                [colMap['Same/Similar']]: false,
-                [colMap['POD']]: true,
-                [colMap['Attachments']]: [],
-                [colMap['Tracking']]: 'TRACK12345',
-                [colMap['Tracking Status']]: 'Delivered',
-                [colMap['Delivered Date']]: '2025-01-22',
-                [colMap['Notes']]: 'Delivered on time',
-                [colMap['Address']]: '123 Main St',
-                [colMap['City']]: 'New York',
-                [colMap['State']]: 'NY',
-                [colMap['Zip']]: '10001',
-                [colMap['DOB']]: '1990-01-01',
-                [colMap['Patient ID']]: 'PT001',
-                [colMap['Item']]: 'Item A',
-                [colMap['Product']]: 'L0457',
-                [colMap['Billed']]: true,
-                [colMap['Paid']]: '150.00',
-                [colMap['Amount']]: '200.00',
-                [colMap['Secondary Pay']]: '50.00',
-                [colMap['Deductible']]: '0.00',
-                [colMap['Billing Notes']]: 'Paid in full',
-                [colMap['Reversal Needed']]: false,
-                [colMap['Method']]: 'Check',
-                [colMap['Completed']]: true,
-                [colMap['Reversal Form']]: [],
-                [colMap['Last Modified']]: new Date().toISOString(),
-                [colMap['Last Modified By']]: 'Admin',
-                [colMap['Reason for Return']]: 'No Answer',
-                [colMap['Summary (State)']]: 'Processed'
-            }
-        }
-    })
+    ... (mock row creation removed)
+    */
 
-    // Mock Row 2
-    await prisma.row.create({
-        data: {
-            sheetId: patientsSheet.id,
-            order: 1,
-            data: {
-                [colMap['Patient Name']]: 'Jane Smith',
-                [colMap['DOS']]: '2025-02-15',
-                [colMap['Returned']]: true,
-                [colMap['Complete']]: false,
-                [colMap['Packing Slip']]: false,
-                [colMap['Has Voice Record']]: false,
-                [colMap['RX']]: true,
-                [colMap['Clinical Notes']]: false,
-                [colMap['Same/Similar']]: true,
-                [colMap['POD']]: false,
-                [colMap['Attachments']]: [],
-                [colMap['Tracking']]: 'TRACK67890',
-                [colMap['Tracking Status']]: 'Pending',
-                [colMap['Delivered Date']]: '',
-                [colMap['Notes']]: 'Pending delivery',
-                [colMap['Address']]: '456 Oak Ave',
-                [colMap['City']]: 'Los Angeles',
-                [colMap['State']]: 'CA',
-                [colMap['Zip']]: '90001',
-                [colMap['DOB']]: '1985-05-15',
-                [colMap['Patient ID']]: 'PT002',
-                [colMap['Item']]: 'Item B',
-                [colMap['Product']]: 'L1833',
-                [colMap['Billed']]: false,
-                [colMap['Paid']]: '0.00',
-                [colMap['Amount']]: '250.00',
-                [colMap['Secondary Pay']]: '0.00',
-                [colMap['Deductible']]: '50.00',
-                [colMap['Billing Notes']]: 'Waiting for insurance',
-                [colMap['Reversal Needed']]: true,
-                [colMap['Method']]: 'Electronic',
-                [colMap['Completed']]: false,
-                [colMap['Reversal Form']]: [],
-                [colMap['Last Modified']]: new Date().toISOString(),
-                [colMap['Last Modified By']]: 'Admin',
-                [colMap['Reason for Return']]: 'BAD STATE',
-                [colMap['Summary (State)']]: 'Pending'
-            }
-        }
-    })
-
-    console.log('Seed data created with full schema.')
+    console.log('Seed data created with empty sheets.')
 }
 
 main()

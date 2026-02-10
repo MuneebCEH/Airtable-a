@@ -18,6 +18,8 @@ export const metadata: Metadata = {
   description: "Advanced patient management and medical record tracking system.",
 };
 
+import { Toaster } from "sonner";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -30,6 +32,7 @@ export default function RootLayout({
       >
         <Providers>
           {children}
+          <Toaster position="top-right" richColors />
         </Providers>
       </body>
     </html>

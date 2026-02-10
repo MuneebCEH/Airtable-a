@@ -30,15 +30,20 @@ export function GridView({ project, sheets, columns, rows, activeSheetId }: Grid
     const pathname = usePathname()
     const searchParams = useSearchParams()
 
+    // Bulk selection state
+    const [isSelectionMode, setIsSelectionMode] = React.useState(false)
+    const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([])
+
     const handleSheetChange = (sheetId: string) => {
         const params = new URLSearchParams(searchParams)
         params.set("sheetId", sheetId)
         router.push(`${pathname}?${params.toString()}`)
     }
 
-    // Transform rows if needed, or assume they are passed transformed. 
-    // If rows come from Prisma as { id, data: {...} }, we might need to flatten them here or in the parent.
-    // Let's assume parent flattens them for now.
+    const toggleSelectionMode = () => {
+        setIsSelectionMode(!isSelectionMode)
+        setSelectedRowIds([]) // Clear selection when toggling
+    }
 
     return (
         <div className="flex flex-col h-full bg-background">
@@ -52,7 +57,7 @@ export function GridView({ project, sheets, columns, rows, activeSheetId }: Grid
 
             {/* Secondary Level: Toolbar & View Controls */}
             <div className="flex flex-col border-b">
-                {/* We can put the View Switcher (Grid/Kanban) inside the toolbar or here */}
+                {/* View Switcher (Grid/Kanban) */}
                 <div className="border-b px-4 bg-muted/10">
                     <Tabs defaultValue="grid" className="w-full">
                         <TabsList className="bg-transparent h-10 p-0 justify-start w-full gap-4">
@@ -77,12 +82,26 @@ export function GridView({ project, sheets, columns, rows, activeSheetId }: Grid
                         </TabsList>
                     </Tabs>
                 </div>
-                <GridToolbar />
+                <GridToolbar
+                    columns={columns}
+                    rows={rows}
+                    sheetId={activeSheetId || ""}
+                    isSelectionMode={isSelectionMode}
+                    onToggleSelectionMode={toggleSelectionMode}
+                    selectedRowIds={selectedRowIds}
+                />
             </div>
 
 
             <div className="flex-1 overflow-hidden p-0 relative">
-                <DataTable columns={columns} data={rows} sheetId={activeSheetId} />
+                <DataTable
+                    columns={columns}
+                    data={rows}
+                    sheetId={activeSheetId}
+                    isSelectionMode={isSelectionMode}
+                    selectedRowIds={selectedRowIds}
+                    setSelectedRowIds={setSelectedRowIds}
+                />
             </div>
         </div>
     )
