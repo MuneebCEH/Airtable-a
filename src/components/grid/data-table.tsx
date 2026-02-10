@@ -523,8 +523,8 @@ export function DataTable({
 
         const dataCols = initialColumns.map((col) => ({
             accessorKey: col.id,
-            header: ({ column }) => <ColumnHeader column={col} sheetId={sheetId} getColumnIcon={getColumnIcon} />,
-            cell: ({ getValue, row, table }) => <EditableCell getValue={getValue} row={row} column={col} table={table} />,
+            header: ({ column }: { column: any }) => <ColumnHeader column={col} sheetId={sheetId} getColumnIcon={getColumnIcon} />,
+            cell: ({ getValue, row, table }: { getValue: any, row: any, table: any }) => <EditableCell getValue={getValue} row={row} column={col} table={table} />,
             size: col.width || 150,
         }))
 
