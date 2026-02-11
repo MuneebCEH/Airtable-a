@@ -1,4 +1,4 @@
-// Last updated: 2026-02-11T06:58:00
+// Last updated: 2026-02-11T07:02:00
 'use server'
 
 import { prisma } from "@/lib/prisma"
@@ -22,52 +22,66 @@ export interface CalendarEvent {
 export async function getCalendarEvents(): Promise<CalendarEvent[]> {
     try {
         const events: CalendarEvent[] = []
-        const sheets = await prisma.sheet.findMany({ include: { columns: true } })
+
+        // Fetch all relevant sheets with their columns
+        const sheets = await prisma.sheet.findMany({
+            include: {
+                columns: true
+            }
+        })
 
         for (const sheet of sheets) {
-            const sheetNameLower = sheet.name.toLowerCase()
-            let nameColumn = sheet.columns.find(c =>
+            const nameColumn = sheet.columns.find(c =>
                 c.name.toLowerCase() === "name" ||
                 c.name.toLowerCase() === "patient name" ||
                 c.name.toLowerCase().includes("patient")
             )
 
-            // Priority Columns
-            const refillCol = sheet.columns.find(c => c.name.toLowerCase() === "refill due")
-            const deliveredCol = sheet.columns.find(c =>
+            const dateCols = sheet.columns.filter(c =>
+                c.name.toLowerCase() === "refill due" ||
                 c.name.toLowerCase() === "delivered date" ||
                 c.name.toLowerCase() === "date delivered"
             )
 
-            if (refillCol || deliveredCol) {
-                const rows = await prisma.row.findMany({ where: { sheetId: sheet.id } })
+            if (dateCols.length > 0) {
+                const rows = await prisma.row.findMany({
+                    where: { sheetId: sheet.id }
+                })
+
                 for (const row of rows) {
                     const data = row.data as Record<string, any>
 
-                    // Priority: Refill Due, then Delivered Date
-                    let activeCol = null
-                    if (refillCol && data[refillCol.id]) {
-                        activeCol = refillCol
-                    } else if (deliveredCol && data[deliveredCol.id]) {
-                        activeCol = deliveredCol
+                    // Priority: Refill Due > Delivered Date
+                    let bestDateCol = dateCols.find(c => c.name.toLowerCase() === "refill due")
+                    if (!bestDateCol || !data[bestDateCol.id]) {
+                        const delivered = dateCols.find(c => c.name.toLowerCase().includes("delivered"))
+                        if (delivered && data[delivered.id]) {
+                            bestDateCol = delivered
+                        } else {
+                            bestDateCol = undefined
+                        }
                     }
 
-                    if (activeCol && data[activeCol.id]) {
-                        const dateValue = String(data[activeCol.id]).trim()
+                    if (bestDateCol && data[bestDateCol.id]) {
+                        const dateValue = String(data[bestDateCol.id]).trim()
+
+                        // Handle potential date format issues (e.g. 02/02/2026)
+                        // Most JS engines handle this, but let's be safe
                         const date = new Date(dateValue)
+
                         if (!isNaN(date.getTime())) {
-                            const isRefill = activeCol.name.toLowerCase().includes("refill")
                             const nameValue = nameColumn ? data[nameColumn.id] : "Unnamed"
+                            const isRefill = bestDateCol.name.toLowerCase().includes("refill")
 
                             events.push({
-                                id: `${row.id}:date:${activeCol.id}`,
+                                id: `${row.id}:date:${bestDateCol.id}`,
                                 pureRowId: row.id,
                                 title: `${isRefill ? 'Refill' : 'Delivered'}: ${String(nameValue || "Unnamed")}`,
                                 start: date,
                                 end: date,
                                 allDay: true,
                                 sheetId: sheet.id,
-                                dateColumnId: activeCol.id,
+                                dateColumnId: bestDateCol.id,
                                 fullData: data,
                                 columns: sheet.columns.map(c => ({ id: c.id, name: c.name }))
                             })
@@ -76,14 +90,13 @@ export async function getCalendarEvents(): Promise<CalendarEvent[]> {
                 }
             }
         }
+
         return events
     } catch (error) {
         console.error("Error fetching calendar events:", error)
         return []
     }
 }
-
-
 
 export async function updateEventDate(combinedId: string, sheetId: string, dateColumnId: string, newDate: Date) {
     try {
