@@ -734,54 +734,28 @@ export function DataTable({
                     {rowVirtualizer.getVirtualItems().map((virtualRow) => {
                         const row = rows[virtualRow.index]
                         return (
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
+                            <div
+                                key={virtualRow.index}
+                                className={cn(
+                                    "flex absolute top-0 left-0 w-full border-b border-slate-100 hover:bg-slate-50/80 transition-colors bg-background items-center group",
+                                    virtualRow.index % 2 === 0 ? "bg-background" : "bg-slate-50/30"
+                                )}
+                                style={{
+                                    height: `${virtualRow.size}px`,
+                                    transform: `translateY(${virtualRow.start}px)`,
+                                }}
+                            >
+                                {row.getVisibleCells().map((cell) => (
                                     <div
-                                        key={virtualRow.index}
-                                        className={cn(
-                                            "flex absolute top-0 left-0 w-full border-b border-slate-100 hover:bg-slate-50/80 transition-colors bg-background items-center group cursor-context-menu",
-                                            virtualRow.index % 2 === 0 ? "bg-background" : "bg-slate-50/30"
-                                        )}
-                                        style={{
-                                            height: `${virtualRow.size}px`,
-                                            transform: `translateY(${virtualRow.start}px)`,
-                                        }}
-                                        onContextMenu={(e) => {
-                                            // We don't need to prevent default here if we use DropdownMenu as triggered by right click
-                                            // But DropdownMenuTrigger asChild usually handles clicks. 
-                                            // Standard Shadcn Dropdown doesn't support right click out of box easily without a specialized component.
-                                            // We will simulate it by ensuring the Trigger covers the row.
-                                        }}
+                                        key={cell.id}
+                                        className="px-0 py-0 border-r border-slate-100 h-full flex items-center outline-none cursor-text shrink-0 select-text"
+                                        style={{ width: cell.column.getSize() }}
+                                        tabIndex={0}
                                     >
-                                        {row.getVisibleCells().map((cell) => (
-                                            <div
-                                                key={cell.id}
-                                                className="px-0 py-0 border-r border-slate-100 h-full flex items-center outline-none cursor-text shrink-0 select-text"
-                                                style={{ width: cell.column.getSize() }}
-                                                tabIndex={0}
-                                            >
-                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                            </div>
-                                        ))}
+                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                     </div>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="start" className="w-48 bg-white">
-                                    <DropdownMenuItem
-                                        className="gap-2 cursor-pointer"
-                                        onClick={() => handleInsertRow(virtualRow.index)}
-                                    >
-                                        <Plus className="h-4 w-4" />
-                                        <span>Insert Row Below</span>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                        className="gap-2 text-destructive cursor-pointer"
-                                        onClick={() => table.options.meta?.deleteRows?.([row.original.id])}
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                        <span>Delete Row</span>
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
+                                ))}
+                            </div>
                         )
                     })}
                     {/* Add row at the bottom */}
