@@ -677,7 +677,7 @@ export function DataTable({
                             {headerGroup.headers.map(header => (
                                 <div
                                     key={header.id}
-                                    className="flex items-center px-3 py-2 border-r border-[#eeb44c] h-9 select-none shrink-0 bg-[#ffd66b] hover:bg-[#fccb4f] transition-colors"
+                                    className="flex items-center px-3 py-2 border-r border-[#eeb44c] h-9 shrink-0 bg-[#ffd66b] hover:bg-[#fccb4f] transition-colors"
                                     style={{ width: header.getSize() }}
                                 >
                                     {header.isPlaceholder
@@ -721,7 +721,7 @@ export function DataTable({
                                 {row.getVisibleCells().map((cell) => (
                                     <div
                                         key={cell.id}
-                                        className="px-0 py-0 border-r border-border h-full flex items-center outline-none focus-within:ring-2 focus-within:ring-primary focus-within:-outline-offset-2 cursor-default shrink-0"
+                                        className="px-0 py-0 border-r border-border h-full flex items-center outline-none focus-within:ring-2 focus-within:ring-primary focus-within:-outline-offset-2 cursor-text shrink-0 select-text"
                                         style={{ width: cell.column.getSize() }}
                                         tabIndex={0}
                                     >
