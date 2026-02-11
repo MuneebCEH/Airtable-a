@@ -10,8 +10,10 @@ import {
     List,
     Calendar,
     Layout,
-    LayoutDashboard
+    LayoutDashboard,
+    Search
 } from "lucide-react"
+import { SortingState, ColumnFiltersState, VisibilityState } from "@tanstack/react-table"
 
 import { SheetNavigation } from "./sheet-navigation"
 
@@ -33,6 +35,11 @@ export function GridView({ project, sheets, columns, rows, activeSheetId }: Grid
     // Bulk selection state
     const [isSelectionMode, setIsSelectionMode] = React.useState(false)
     const [selectedRowIds, setSelectedRowIds] = React.useState<string[]>([])
+
+    // Table states for Toolbar coordination
+    const [globalFilter, setGlobalFilter] = React.useState("")
+    const [sorting, setSorting] = React.useState<SortingState>([])
+    const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
 
     const handleSheetChange = (sheetId: string) => {
         const params = new URLSearchParams(searchParams)
@@ -59,7 +66,15 @@ export function GridView({ project, sheets, columns, rows, activeSheetId }: Grid
             <div className="flex flex-col border-b">
                 {/* View Switcher (Grid/Kanban) */}
                 <div className="border-b px-4 bg-muted/10">
-                    <Tabs defaultValue="grid" className="w-full">
+                    <Tabs
+                        defaultValue="grid"
+                        className="w-full"
+                        onValueChange={(value) => {
+                            if (value === "calendar") {
+                                router.push("/calendar")
+                            }
+                        }}
+                    >
                         <TabsList className="bg-transparent h-10 p-0 justify-start w-full gap-4">
                             <TabsTrigger
                                 value="grid"
@@ -89,6 +104,12 @@ export function GridView({ project, sheets, columns, rows, activeSheetId }: Grid
                     isSelectionMode={isSelectionMode}
                     onToggleSelectionMode={toggleSelectionMode}
                     selectedRowIds={selectedRowIds}
+                    globalFilter={globalFilter}
+                    setGlobalFilter={setGlobalFilter}
+                    columnVisibility={columnVisibility}
+                    setColumnVisibility={setColumnVisibility}
+                    sorting={sorting}
+                    setSorting={setSorting}
                 />
             </div>
 
@@ -101,6 +122,12 @@ export function GridView({ project, sheets, columns, rows, activeSheetId }: Grid
                     isSelectionMode={isSelectionMode}
                     selectedRowIds={selectedRowIds}
                     setSelectedRowIds={setSelectedRowIds}
+                    globalFilter={globalFilter}
+                    setGlobalFilter={setGlobalFilter}
+                    sorting={sorting}
+                    setSorting={setSorting}
+                    columnVisibility={columnVisibility}
+                    setColumnVisibility={setColumnVisibility}
                 />
             </div>
         </div>

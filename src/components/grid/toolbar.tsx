@@ -15,14 +15,29 @@ import {
     MoreHorizontal,
     Trash2,
     CheckCircle2,
-    ArrowRightCircle
+    ArrowRightCircle,
+    Eye,
+    EyeOff
 } from "lucide-react"
+import {
+    DropdownMenu,
+    DropdownMenuCheckboxItem,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
+} from "@/components/ui/dropdown-menu"
+import { SortingState, VisibilityState } from "@tanstack/react-table"
 import Papa from "papaparse"
 import { bulkCreateRows, deleteRows, bulkMoveToCgmPts, bulkMoveToBrxPts } from "@/app/actions/rows"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
 import { useRouter } from "next/navigation"
+import { NewRecordModal } from "./new-record-modal"
 
 interface GridToolbarProps {
     columns: any[]
@@ -31,11 +46,31 @@ interface GridToolbarProps {
     isSelectionMode: boolean
     onToggleSelectionMode: () => void
     selectedRowIds: string[]
+    globalFilter: string
+    setGlobalFilter: (val: string) => void
+    columnVisibility: VisibilityState
+    setColumnVisibility: (val: VisibilityState) => void
+    sorting: SortingState
+    setSorting: (val: any) => void
 }
 
-export function GridToolbar({ columns, rows, sheetId, isSelectionMode, onToggleSelectionMode, selectedRowIds }: GridToolbarProps) {
+export function GridToolbar({
+    columns,
+    rows,
+    sheetId,
+    isSelectionMode,
+    onToggleSelectionMode,
+    selectedRowIds,
+    globalFilter,
+    setGlobalFilter,
+    columnVisibility,
+    setColumnVisibility,
+    sorting,
+    setSorting
+}: GridToolbarProps) {
     const router = useRouter()
     const fileInputRef = React.useRef<HTMLInputElement>(null)
+    const [isAddModalOpen, setIsAddModalOpen] = React.useState(false)
 
     const handleDelete = async () => {
         if (selectedRowIds.length === 0) return
@@ -182,23 +217,85 @@ export function GridToolbar({ columns, rows, sheetId, isSelectionMode, onToggleS
                 <div className="flex items-center gap-1 border rounded-md px-2 py-1 bg-muted/20">
                     <Search className="h-4 w-4 text-muted-foreground" />
                     <Input
-                        className="h-6 w-40 border-none shadow-none focus-visible:ring-0 bg-transparent placeholder:text-muted-foreground"
+                        className="h-6 w-40 border-none shadow-none focus-visible:ring-0 bg-transparent placeholder:text-muted-foreground text-xs"
                         placeholder="Find in view..."
+                        value={globalFilter ?? ""}
+                        onChange={(e) => setGlobalFilter(e.target.value)}
                     />
                 </div>
 
-                <Button variant="outline" size="sm" className="h-8 gap-2">
-                    <Filter className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs">Filter</span>
-                </Button>
-                <Button variant="outline" size="sm" className="h-8 gap-2">
-                    <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs">Sort</span>
-                </Button>
-                <Button variant="outline" size="sm" className="h-8 gap-2">
-                    <Settings2 className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs">Columns</span>
-                </Button>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-8 gap-2">
+                            <Filter className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-xs">Filter</span>
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-56 bg-white">
+                        <DropdownMenuLabel className="text-xs">Filter records</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <div className="p-2 text-xs text-muted-foreground italic">
+                            Column filtering is active in search. Advanced filters coming soon.
+                        </div>
+                        {globalFilter && (
+                            <DropdownMenuItem onClick={() => setGlobalFilter("")} className="text-xs text-amber-600 font-medium">
+                                Clear Search
+                            </DropdownMenuItem>
+                        )}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-8 gap-2">
+                            <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-xs">Sort</span>
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-56 bg-white">
+                        <DropdownMenuLabel className="text-xs">Sort by Column</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuRadioGroup
+                            value={sorting[0]?.id}
+                            onValueChange={(val) => setSorting([{ id: val, desc: false }])}
+                        >
+                            <DropdownMenuRadioItem value="" className="text-xs">Default (Recent)</DropdownMenuRadioItem>
+                            {columns.slice(0, 8).map(col => (
+                                <DropdownMenuRadioItem key={col.id} value={col.id} className="text-xs">
+                                    {col.name}
+                                </DropdownMenuRadioItem>
+                            ))}
+                        </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-8 gap-2">
+                            <Settings2 className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-xs">Columns</span>
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-56 bg-white">
+                        <DropdownMenuLabel className="text-xs">Toggle Columns</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {columns.map((column) => (
+                            <DropdownMenuCheckboxItem
+                                key={column.id}
+                                className="capitalize text-xs"
+                                checked={columnVisibility[column.id] !== false}
+                                onCheckedChange={(value) =>
+                                    setColumnVisibility({
+                                        ...columnVisibility,
+                                        [column.id]: !!value,
+                                    })
+                                }
+                            >
+                                {column.name}
+                            </DropdownMenuCheckboxItem>
+                        ))}
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
 
             <div className="flex items-center gap-2">
@@ -293,11 +390,18 @@ export function GridToolbar({ columns, rows, sheetId, isSelectionMode, onToggleS
                     Export
                 </Button>
 
-                <Button size="sm" className="h-8">
+                <Button size="sm" className="h-8 shadow-sm bg-amber-500 hover:bg-amber-600 text-white font-bold" onClick={() => setIsAddModalOpen(true)}>
                     <Plus className="h-4 w-4 mr-1" />
                     Add Record
                 </Button>
             </div>
+
+            <NewRecordModal
+                isOpen={isAddModalOpen}
+                onClose={() => setIsAddModalOpen(false)}
+                columns={columns}
+                sheetId={sheetId}
+            />
         </div>
     )
 }

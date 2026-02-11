@@ -9,6 +9,7 @@ import {
     ColumnDef,
     flexRender,
     SortingState,
+    VisibilityState
 } from "@tanstack/react-table"
 import { useVirtualizer } from "@tanstack/react-virtual"
 // Import server action
@@ -435,6 +436,12 @@ interface DataTableProps {
     isSelectionMode: boolean
     selectedRowIds: string[]
     setSelectedRowIds: React.Dispatch<React.SetStateAction<string[]>>
+    globalFilter: string
+    setGlobalFilter: (val: string) => void
+    sorting: SortingState
+    setSorting: (val: any) => void
+    columnVisibility: VisibilityState
+    setColumnVisibility: (val: any) => void
 }
 
 export function DataTable({
@@ -443,10 +450,15 @@ export function DataTable({
     sheetId,
     isSelectionMode,
     selectedRowIds,
-    setSelectedRowIds
+    setSelectedRowIds,
+    globalFilter,
+    setGlobalFilter,
+    sorting,
+    setSorting,
+    columnVisibility,
+    setColumnVisibility
 }: DataTableProps) {
     const [data, setData] = React.useState(initialData)
-    const [sorting, setSorting] = React.useState<SortingState>([])
 
     // Ref to track processing rows to avoid double submissions if needed
     // but state update is simple enough
@@ -616,9 +628,13 @@ export function DataTable({
         state: {
             sorting,
             rowSelection,
+            globalFilter,
+            columnVisibility,
         },
         enableRowSelection: isSelectionMode,
         onRowSelectionChange: setRowSelection,
+        onGlobalFilterChange: setGlobalFilter,
+        onColumnVisibilityChange: setColumnVisibility,
         meta: {
             updateData,
             openProfile,
