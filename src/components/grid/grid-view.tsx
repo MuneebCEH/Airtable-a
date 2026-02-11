@@ -41,10 +41,14 @@ export function GridView({ project, sheets, columns, rows, activeSheetId }: Grid
     const [sorting, setSorting] = React.useState<SortingState>([])
     const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
 
+    const [isPending, startTransition] = React.useTransition()
+
     const handleSheetChange = (sheetId: string) => {
         const params = new URLSearchParams(searchParams)
         params.set("sheetId", sheetId)
-        router.push(`${pathname}?${params.toString()}`)
+        startTransition(() => {
+            router.push(`${pathname}?${params.toString()}`, { scroll: false })
+        })
     }
 
     const toggleSelectionMode = () => {

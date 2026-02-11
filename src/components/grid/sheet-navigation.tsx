@@ -85,6 +85,11 @@ export function SheetNavigation({ sheets, activeSheetId, onSheetChange, projectI
                                 <div className="flex items-center">
                                     <button
                                         onClick={() => onSheetChange(sheet.id)}
+                                        onMouseEnter={() => {
+                                            if (!isActive) {
+                                                router.prefetch(`/projects/${projectId}?sheetId=${sheet.id}`)
+                                            }
+                                        }}
                                         onDoubleClick={() => startRename(sheet.id, sheet.name)}
                                         className={cn(
                                             "inline-flex items-center justify-center rounded-t-md px-4 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
