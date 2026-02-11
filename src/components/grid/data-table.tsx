@@ -850,11 +850,11 @@ export function DataTable({
 
             {/* Patient Profile Dialog - Optimized & Sexy Design */}
             <Dialog open={isProfileOpen} onOpenChange={setIsProfileOpen}>
-                <DialogContent className="max-w-[1400px] w-[98vw] h-[92vh] p-0 overflow-hidden bg-white border-none shadow-2xl flex flex-col rounded-xl">
+                <DialogContent className="max-w-[1650px] w-[96vw] h-[95vh] p-0 overflow-hidden bg-white border-none shadow-2xl flex flex-col rounded-xl">
                     {selectedProfileRow && (
                         <div className="flex h-full flex-row">
                             {/* Main Content Area */}
-                            <div className="flex-[1.5] flex flex-col bg-white overflow-hidden border-r border-slate-100 min-w-0">
+                            <div className="flex-[2] flex flex-col bg-white overflow-hidden border-r border-slate-100 min-w-0">
                                 {/* Header Navigation bar (Standard Airtable look) */}
                                 <div className="h-12 border-b flex items-center justify-between px-4 text-slate-500 bg-white shrink-0">
                                     <div className="flex items-center gap-2">
@@ -890,8 +890,8 @@ export function DataTable({
                                 </div>
 
                                 {/* Form Fields List (Vertical with icons) */}
-                                <div className="flex-1 overflow-y-auto p-10 pt-2 space-y-10 custom-scrollbar">
-                                    <div className="space-y-6 w-full max-w-4xl">
+                                <div className="flex-1 overflow-y-auto p-12 pt-4 space-y-12 custom-scrollbar">
+                                    <div className="space-y-8 w-full max-w-5xl">
                                         {initialColumns.filter(col => col.name.toLowerCase() !== 'patient name').map((col) => {
                                             const value = selectedProfileRow[col.id];
                                             const isEmpty = value === null || value === undefined || value === '';
