@@ -1,3 +1,4 @@
+// Last updated: 2026-02-11T06:58:00
 'use server'
 
 import { prisma } from "@/lib/prisma"
@@ -51,8 +52,8 @@ export async function getCalendarEvents(): Promise<CalendarEvent[]> {
                         activeCol = deliveredCol
                     }
 
-                    if (activeCol) {
-                        const dateValue = data[activeCol.id]
+                    if (activeCol && data[activeCol.id]) {
+                        const dateValue = String(data[activeCol.id]).trim()
                         const date = new Date(dateValue)
                         if (!isNaN(date.getTime())) {
                             const isRefill = activeCol.name.toLowerCase().includes("refill")
