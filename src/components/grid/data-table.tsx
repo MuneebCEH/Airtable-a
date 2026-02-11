@@ -850,11 +850,11 @@ export function DataTable({
 
             {/* Patient Profile Dialog - Optimized & Sexy Design */}
             <Dialog open={isProfileOpen} onOpenChange={setIsProfileOpen}>
-                <DialogContent className="max-w-[1850px] w-[98vw] h-[98vh] p-0 overflow-hidden bg-white border-none shadow-2xl flex flex-col rounded-xl">
+                <DialogContent className="sm:max-w-none max-w-[1850px] w-[98vw] h-[98vh] p-0 overflow-hidden bg-white border-none shadow-2xl flex flex-col rounded-xl">
                     {selectedProfileRow && (
-                        <div className="flex h-full flex-row">
+                        <div className="flex h-full flex-row overflow-hidden">
                             {/* Main Content Area */}
-                            <div className="flex-[2] flex flex-col bg-white overflow-hidden border-r border-slate-100 min-w-0">
+                            <div className="flex-[3] flex flex-col bg-white overflow-hidden border-r border-slate-100 min-w-[800px]">
                                 {/* Header Navigation bar (Standard Airtable look) */}
                                 <div className="h-12 border-b flex items-center justify-between px-4 text-slate-500 bg-white shrink-0">
                                     <div className="flex items-center gap-2">
