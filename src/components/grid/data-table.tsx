@@ -701,12 +701,12 @@ export function DataTable({
                 >
                     {table.getHeaderGroups().map(headerGroup => (
                         <div key={headerGroup.id} className="flex w-full">
-                            {headerGroup.headers.map(header => (
+                            {headerGroup.headers.map((header, index) => (
                                 <div
                                     key={header.id}
                                     className={cn(
                                         "relative flex items-center px-3 py-2 border-r border-slate-200 h-9 shrink-0 bg-[#f5f5f5] hover:bg-[#ececec] transition-colors group text-[11px] uppercase tracking-wider font-semibold",
-                                        (header.column.id === 'patientName' || header.column.columnDef.header?.toString().toLowerCase().includes('patient name')) && "sticky left-0 z-30 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] border-r-2"
+                                        index === 0 && "sticky left-0 z-30 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] border-r-2"
                                     )}
                                     style={{ width: header.getSize() }}
                                 >
@@ -740,23 +740,23 @@ export function DataTable({
                             <div
                                 key={virtualRow.index}
                                 className={cn(
-                                    "flex absolute top-0 left-0 w-full border-b border-slate-100 hover:bg-slate-50/80 transition-colors bg-background items-center group",
+                                    "flex absolute left-0 w-full border-b border-slate-100 hover:bg-slate-50/80 transition-colors bg-background items-center group",
                                     virtualRow.index % 2 === 0 ? "bg-background" : "bg-slate-50/30"
                                 )}
                                 style={{
                                     height: `${virtualRow.size}px`,
-                                    transform: `translateY(${virtualRow.start}px)`,
+                                    top: `${virtualRow.start}px`,
                                 }}
                             >
-                                {row.getVisibleCells().map((cell) => {
-                                    const isPatientName = cell.column.id === 'patientName' || cell.column.columnDef.header?.toString().toLowerCase().includes('patient name')
+                                {row.getVisibleCells().map((cell, index) => {
+                                    const isFirstColumn = index === 0
 
                                     return (
                                         <div
                                             key={cell.id}
                                             className={cn(
-                                                "px-0 py-0 border-r border-slate-100 h-full flex items-center outline-none cursor-text shrink-0 select-text bg-inherit",
-                                                isPatientName && "sticky left-0 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] border-r-2"
+                                                "px-0 py-0 border-r border-slate-100 h-full flex items-center outline-none cursor-text shrink-0 select-text",
+                                                isFirstColumn ? "sticky left-0 z-10 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] border-r-2" : "bg-inherit"
                                             )}
                                             style={{ width: cell.column.getSize() }}
                                             tabIndex={0}
