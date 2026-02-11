@@ -850,7 +850,7 @@ export function DataTable({
 
             {/* Patient Profile Dialog - Optimized & Sexy Design */}
             <Dialog open={isProfileOpen} onOpenChange={setIsProfileOpen}>
-                <DialogContent className="max-w-[1650px] w-[96vw] h-[95vh] p-0 overflow-hidden bg-white border-none shadow-2xl flex flex-col rounded-xl">
+                <DialogContent className="max-w-[1850px] w-[98vw] h-[98vh] p-0 overflow-hidden bg-white border-none shadow-2xl flex flex-col rounded-xl">
                     {selectedProfileRow && (
                         <div className="flex h-full flex-row">
                             {/* Main Content Area */}
@@ -876,35 +876,35 @@ export function DataTable({
                                 </div>
 
                                 {/* Primary Field (Patient Name large box) */}
-                                <div className="p-10 pt-8 pb-6 shrink-0">
-                                    <div className="flex items-center gap-2 text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2.5 pl-1">
-                                        <Type className="h-3.5 w-3.5" />
+                                <div className="p-14 pt-10 pb-8 shrink-0">
+                                    <div className="flex items-center gap-2.5 text-[12px] font-black text-slate-400 uppercase tracking-widest mb-3 pl-1">
+                                        <Type className="h-4 w-4" />
                                         Patient Name
                                     </div>
-                                    <div className="w-full border-2 border-blue-500 rounded-lg p-5 text-3xl font-bold text-slate-900 bg-white group hover:border-blue-600 transition-all cursor-text relative shadow-sm">
+                                    <div className="w-full border-2 border-blue-500 rounded-xl p-6 text-4xl font-bold text-slate-900 bg-white group hover:border-blue-600 transition-all cursor-text relative shadow-sm">
                                         {initialColumns.find(c => c.name.toLowerCase() === 'patient name')
                                             ? selectedProfileRow[initialColumns.find(c => c.name.toLowerCase() === 'patient name')!.id]
                                             : "Patient Record"}
-                                        <span className="absolute right-5 top-1/2 -translate-y-1/2 opacity-10 text-slate-900 text-xl font-mono">@</span>
+                                        <span className="absolute right-6 top-1/2 -translate-y-1/2 opacity-10 text-slate-900 text-2xl font-mono">@</span>
                                     </div>
                                 </div>
 
                                 {/* Form Fields List (Vertical with icons) */}
-                                <div className="flex-1 overflow-y-auto p-12 pt-4 space-y-12 custom-scrollbar">
-                                    <div className="space-y-8 w-full max-w-5xl">
+                                <div className="flex-1 overflow-y-auto p-14 pt-2 space-y-12 custom-scrollbar">
+                                    <div className="space-y-10 w-full max-w-6xl">
                                         {initialColumns.filter(col => col.name.toLowerCase() !== 'patient name').map((col) => {
                                             const value = selectedProfileRow[col.id];
                                             const isEmpty = value === null || value === undefined || value === '';
 
                                             return (
-                                                <div key={col.id} className="grid grid-cols-[220px_1fr] gap-8 items-center group">
-                                                    <div className="flex items-center gap-3.5 py-1 text-slate-500 select-none">
-                                                        <span className="p-1.5 rounded-md bg-slate-50 group-hover:bg-slate-100 transition-colors shadow-sm">
+                                                <div key={col.id} className="grid grid-cols-[280px_1fr] gap-12 items-center group">
+                                                    <div className="flex items-center gap-4 py-1 text-slate-500 select-none">
+                                                        <span className="p-2 rounded-lg bg-slate-50 group-hover:bg-slate-100 transition-colors shadow-sm">
                                                             {getColumnIcon(col.type)}
                                                         </span>
-                                                        <span className="text-[13px] font-bold text-slate-600 truncate group-hover:text-slate-900 transition-colors">{col.name}</span>
+                                                        <span className="text-[14px] font-bold text-slate-600 truncate group-hover:text-slate-900 transition-colors">{col.name}</span>
                                                     </div>
-                                                    <div className="min-h-[42px] flex items-center px-4 py-2 border-2 border-transparent hover:border-slate-100 rounded-lg bg-white transition-all text-slate-800 text-[14px] relative">
+                                                    <div className="min-h-[48px] flex items-center px-5 py-2.5 border-2 border-transparent hover:border-slate-100 rounded-xl bg-white transition-all text-slate-800 text-[15px] relative">
                                                         {col.type === 'CHECKBOX' ? (
                                                             <div className={cn(
                                                                 "h-[18px] w-[18px] rounded border border-slate-300 flex items-center justify-center transition-all",
