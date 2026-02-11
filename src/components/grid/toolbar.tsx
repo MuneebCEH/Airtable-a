@@ -212,12 +212,12 @@ export function GridToolbar({
     }
 
     return (
-        <div className="flex items-center justify-between p-2 border-b bg-background">
+        <div className="flex items-center justify-between p-1 px-4 border-b bg-white">
             <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1 border rounded-md px-2 py-1 bg-muted/20">
-                    <Search className="h-4 w-4 text-muted-foreground" />
+                <div className="flex items-center gap-1 border border-slate-200 rounded px-2 h-7 bg-slate-50 transition-colors focus-within:bg-white focus-within:border-slate-400">
+                    <Search className="h-3.5 w-3.5 text-slate-400" />
                     <Input
-                        className="h-6 w-40 border-none shadow-none focus-visible:ring-0 bg-transparent placeholder:text-muted-foreground text-xs"
+                        className="h-full w-40 border-none shadow-none focus-visible:ring-0 bg-transparent placeholder:text-slate-400 text-[11px]"
                         placeholder="Find in view..."
                         value={globalFilter ?? ""}
                         onChange={(e) => setGlobalFilter(e.target.value)}
@@ -226,9 +226,9 @@ export function GridToolbar({
 
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-8 gap-2">
-                            <Filter className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-xs">Filter</span>
+                        <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-slate-600 hover:bg-slate-100">
+                            <Filter className="h-3.5 w-3.5" />
+                            <span className="text-[11px] font-medium">Filter</span>
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start" className="w-56 bg-white">
@@ -247,9 +247,9 @@ export function GridToolbar({
 
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-8 gap-2">
-                            <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-xs">Sort</span>
+                        <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-slate-600 hover:bg-slate-100">
+                            <ArrowUpDown className="h-3.5 w-3.5" />
+                            <span className="text-[11px] font-medium">Sort</span>
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start" className="w-56 bg-white">
@@ -271,9 +271,9 @@ export function GridToolbar({
 
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-8 gap-2">
-                            <Settings2 className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-xs">Columns</span>
+                        <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-slate-600 hover:bg-slate-100">
+                            <Settings2 className="h-3.5 w-3.5" />
+                            <span className="text-[11px] font-medium">Hide Fields</span>
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start" className="w-56 bg-white">
@@ -303,8 +303,8 @@ export function GridToolbar({
                     variant={isSelectionMode ? "secondary" : "ghost"}
                     size="sm"
                     className={cn(
-                        "h-8 gap-2 transition-all",
-                        isSelectionMode && "bg-amber-100 text-amber-700 hover:bg-amber-200 border-amber-200 shadow-sm"
+                        "h-7 gap-1.5 text-slate-600",
+                        isSelectionMode && "bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-100"
                     )}
                     onClick={onToggleSelectionMode}
                 >
@@ -312,15 +312,19 @@ export function GridToolbar({
                     {isSelectionMode ? "Exit Selection" : "Select Bulk"}
                 </Button>
 
-                <Button variant="ghost" size="sm" className="h-8">
-                    <Share2 className="h-4 w-4 mr-2" />
-                    Share
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-slate-600 px-2"
+                >
+                    <Share2 className="h-3.5 w-3.5 mr-1.5" />
+                    <span className="text-[11px]">Share</span>
                 </Button>
 
                 <Button
                     variant="outline"
                     size="sm"
-                    className="h-8 gap-2 transition-all shadow-sm border-amber-200 text-amber-700 font-bold hover:bg-amber-50"
+                    className="h-7 gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-50 transition-all text-[11px]"
                     onClick={() => {
                         if (!isSelectionMode) {
                             onToggleSelectionMode()
@@ -338,7 +342,7 @@ export function GridToolbar({
                 <Button
                     variant="outline"
                     size="sm"
-                    className="h-8 gap-2 transition-all shadow-sm border-blue-200 text-blue-700 font-bold hover:bg-blue-50"
+                    className="h-7 gap-1.5 border-slate-200 text-slate-600 hover:bg-slate-50 transition-all text-[11px]"
                     onClick={() => {
                         if (!isSelectionMode) {
                             onToggleSelectionMode()
@@ -354,9 +358,9 @@ export function GridToolbar({
                 </Button>
 
                 <Button
-                    variant="destructive"
+                    variant="ghost"
                     size="sm"
-                    className="h-8 gap-2 transition-all shadow-sm text-black font-bold"
+                    className="h-7 gap-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all text-[11px]"
                     onClick={() => {
                         if (!isSelectionMode) {
                             onToggleSelectionMode()
@@ -367,7 +371,7 @@ export function GridToolbar({
                         }
                     }}
                 >
-                    <Trash2 className="h-4 w-4 text-black" />
+                    <Trash2 className="h-3.5 w-3.5" />
                     Delete {selectedRowIds.length > 0 ? `(${selectedRowIds.length})` : ""}
                 </Button>
 
@@ -380,18 +384,18 @@ export function GridToolbar({
                     onChange={handleFileChange}
                 />
 
-                <Button variant="outline" size="sm" className="h-8" onClick={handleImportClick}>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Import
+                <Button variant="ghost" size="sm" className="h-7 text-slate-600 px-2" onClick={handleImportClick}>
+                    <Upload className="h-3.5 w-3.5 mr-1.5" />
+                    <span className="text-[11px]">Import</span>
                 </Button>
 
-                <Button variant="outline" size="sm" className="h-8" onClick={handleExport}>
-                    <Download className="h-4 w-4 mr-2" />
-                    Export
+                <Button variant="ghost" size="sm" className="h-7 text-slate-600 px-2" onClick={handleExport}>
+                    <Download className="h-3.5 w-3.5 mr-1.5" />
+                    <span className="text-[11px]">Export</span>
                 </Button>
 
-                <Button size="sm" className="h-8 shadow-sm bg-amber-500 hover:bg-amber-600 text-white font-bold" onClick={() => setIsAddModalOpen(true)}>
-                    <Plus className="h-4 w-4 mr-1" />
+                <Button size="sm" className="h-7 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] px-3 shadow-sm rounded ml-2" onClick={() => setIsAddModalOpen(true)}>
+                    <Plus className="h-3.5 w-3.5 mr-1" />
                     Add Record
                 </Button>
             </div>

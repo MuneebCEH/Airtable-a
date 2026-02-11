@@ -58,7 +58,7 @@ export function SheetNavigation({ sheets, activeSheetId, onSheetChange, projectI
     }
 
     return (
-        <div className="flex items-center border-b bg-[#ffd66b] border-[#eeb44c]">
+        <div className="flex items-center border-b bg-[#f1f5f9] border-slate-200">
             <ScrollArea className="w-full whitespace-nowrap">
                 <div className="flex w-max space-x-1 p-2">
                     {sheets.map((sheet) => {
@@ -87,10 +87,10 @@ export function SheetNavigation({ sheets, activeSheetId, onSheetChange, projectI
                                         onClick={() => onSheetChange(sheet.id)}
                                         onDoubleClick={() => startRename(sheet.id, sheet.name)}
                                         className={cn(
-                                            "inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
+                                            "inline-flex items-center justify-center rounded-t-md px-4 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
                                             isActive
-                                                ? "bg-white text-[#d97706] shadow-sm"
-                                                : "text-slate-800 hover:bg-[#fccb4f] hover:text-slate-900 bg-transparent"
+                                                ? "bg-white text-slate-900 border-x border-t border-slate-200 shadow-[0_-2px_4px_rgba(0,0,0,0.03)]"
+                                                : "text-slate-500 hover:bg-slate-200/50 hover:text-slate-700 bg-transparent"
                                         )}
                                     >
                                         {sheet.name}
@@ -101,7 +101,7 @@ export function SheetNavigation({ sheets, activeSheetId, onSheetChange, projectI
                                                     onClick={(e) => e.stopPropagation()}
                                                     className="ml-2 p-0.5 rounded-sm hover:bg-sky-100 cursor-pointer"
                                                 >
-                                                    <ChevronDown className="h-3 w-3 text-[#d97706] opacity-70" />
+                                                    <ChevronDown className="ml-2 h-3.5 w-3.5 text-slate-400 opacity-70" />
                                                 </div>
                                             </DropdownMenuTrigger>
                                         )}
@@ -125,11 +125,11 @@ export function SheetNavigation({ sheets, activeSheetId, onSheetChange, projectI
                 </div>
                 <ScrollBar orientation="horizontal" className="h-2" />
             </ScrollArea>
-            <div className="flex items-center px-4 border-l border-[#eeb44c] bg-amber-600/10 h-10">
+            <div className="flex items-center px-4 border-l border-slate-200 h-10">
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 rounded-full border border-dashed border-slate-600/50 text-slate-800 hover:bg-white/20 hover:text-slate-900"
+                    className="h-6 w-6 rounded-md text-slate-500 hover:bg-slate-200"
                     onClick={handleAddSheet}
                 >
                     <span className="sr-only">Add Sheet</span>

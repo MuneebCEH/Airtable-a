@@ -9,8 +9,17 @@ import {
     ColumnDef,
     flexRender,
     SortingState,
-    VisibilityState
+    VisibilityState,
+    RowData
 } from "@tanstack/react-table"
+
+declare module "@tanstack/react-table" {
+    interface TableMeta<TData extends RowData> {
+        updateData: (rowIndex: number, columnId: string, value: any) => void
+        openProfile: (row: any) => void
+        deleteRows: (rowIds: string[]) => void
+    }
+}
 import { useVirtualizer } from "@tanstack/react-virtual"
 // Import server action
 import { uploadFile } from "@/app/actions/upload"
@@ -137,10 +146,20 @@ const EditableCell = ({
         case 'CHECKBOX':
             return (
                 <div className="flex justify-center w-full h-full items-center">
+                    {value ? (
+                        <div className="flex items-center justify-center p-0.5 rounded bg-emerald-500 text-white">
+                            <Check className="h-3 w-3" />
+                        </div>
+                    ) : (
+                        <div
+                            className="h-4 w-4 rounded border border-slate-300 bg-white cursor-pointer"
+                            onClick={() => onCheckboxChange(true)}
+                        />
+                    )}
                     <Checkbox
                         checked={!!value}
                         onCheckedChange={onCheckboxChange}
-                        className="h-4 w-4"
+                        className="hidden" // Keep logical checkbox for accessibility but use custom UI
                     />
                 </div>
             )
@@ -224,26 +243,15 @@ const EditableCell = ({
                 <div className="flex items-center gap-1.5 w-full h-full px-2 overflow-x-auto no-scrollbar group/file-cell">
                     {files.map((f: any, i: number) => {
                         const isImage = /\.(jpg|jpeg|png|gif|svg|webp)$/i.test(f.name)
-                        const isAudio = /\.(mp3|wav|ogg)$/i.test(f.name)
-                        const isVideo = /\.(mp4|mov|webm)$/i.test(f.name)
-                        const isPdf = /\.pdf$/i.test(f.name)
-                        const isArchive = /\.(zip|rar|7z|tar|gz)$/i.test(f.name)
-                        const isCode = /\.(js|ts|jsx|tsx|py|go|cpp|c|h|rb|php|html|css|json)$/i.test(f.name)
 
                         return (
                             <div key={i} className="relative group/thumb shrink-0">
-                                <div className="h-7 w-7 rounded-sm border bg-muted flex items-center justify-center overflow-hidden shadow-sm">
+                                <div className="h-6 w-6 rounded border bg-white flex items-center justify-center overflow-hidden shadow-sm">
                                     {isImage ? (
                                         <img src={f.path} alt={f.name} className="h-full w-full object-cover" />
                                     ) : (
-                                        <div className="text-muted-foreground">
-                                            {isAudio ? <Music className="h-3.5 w-3.5" /> :
-                                                isVideo ? <Video className="h-3.5 w-3.5" /> :
-                                                    isPdf ? <FileText className="h-3.5 w-3.5 text-red-500" /> :
-                                                        isArchive ? <FileArchive className="h-3.5 w-3.5 text-amber-500" /> :
-                                                            isCode ? <FileCode className="h-3.5 w-3.5 text-blue-500" /> :
-                                                                <File className="h-3.5 w-3.5" />
-                                            }
+                                        <div className="text-slate-400">
+                                            <FileText className="h-3.5 w-3.5" />
                                         </div>
                                     )}
                                 </div>
@@ -410,11 +418,11 @@ const ColumnHeader = ({
 
     return (
         <div className="flex items-center gap-2 overflow-hidden w-full group/header">
-            <span className="text-amber-600 shrink-0">{getColumnIcon(column.type)}</span>
+            <span className="text-slate-400 shrink-0">{getColumnIcon(column.type)}</span>
             {isEditing ? (
                 <input
                     autoFocus
-                    className="bg-white text-[11px] font-bold uppercase text-slate-900 outline-none w-full px-1 rounded-sm border border-amber-500 shadow-sm"
+                    className="bg-white text-[11px] font-semibold text-slate-800 outline-none w-full px-1 rounded-sm border border-slate-300 shadow-sm"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     onBlur={handleBlur}
@@ -423,7 +431,7 @@ const ColumnHeader = ({
                 />
             ) : (
                 <span
-                    className="text-[11px] font-bold uppercase text-slate-800 truncate tracking-tight cursor-text hover:bg-black/5 px-1 rounded-sm w-full transition-colors"
+                    className="text-[11px] font-semibold text-slate-600 truncate tracking-tight cursor-text hover:bg-black/5 px-1 rounded-sm w-full transition-colors"
                     onClick={(e) => {
                         e.stopPropagation()
                         setIsEditing(true)
@@ -685,7 +693,7 @@ export function DataTable({
             >
                 {/* Header - Sticky inside scroll container */}
                 <div
-                    className="flex bg-[#ffd66b] font-medium text-slate-900 sticky top-0 z-20 w-fit min-w-full border-b border-[#eeb44c]"
+                    className="flex bg-[#f5f5f5] font-normal text-slate-600 sticky top-0 z-20 w-fit min-w-full border-b border-slate-200"
                     style={{
                         width: table.getTotalSize(),
                         minWidth: '100%'
@@ -696,7 +704,7 @@ export function DataTable({
                             {headerGroup.headers.map(header => (
                                 <div
                                     key={header.id}
-                                    className="relative flex items-center px-3 py-2 border-r border-[#eeb44c] h-9 shrink-0 bg-[#ffd66b] hover:bg-[#fccb4f] transition-colors group"
+                                    className="relative flex items-center px-3 py-2 border-r border-slate-200 h-9 shrink-0 bg-[#f5f5f5] hover:bg-[#ececec] transition-colors group text-[11px] uppercase tracking-wider font-semibold"
                                     style={{ width: header.getSize() }}
                                 >
                                     {header.isPlaceholder
@@ -731,8 +739,8 @@ export function DataTable({
                                     <div
                                         key={virtualRow.index}
                                         className={cn(
-                                            "flex absolute top-0 left-0 w-full border-b hover:bg-muted/50 transition-colors bg-background items-center group cursor-context-menu",
-                                            virtualRow.index % 2 === 0 ? "bg-background" : "bg-muted/10"
+                                            "flex absolute top-0 left-0 w-full border-b border-slate-100 hover:bg-slate-50/80 transition-colors bg-background items-center group cursor-context-menu",
+                                            virtualRow.index % 2 === 0 ? "bg-background" : "bg-slate-50/30"
                                         )}
                                         style={{
                                             height: `${virtualRow.size}px`,
@@ -748,7 +756,7 @@ export function DataTable({
                                         {row.getVisibleCells().map((cell) => (
                                             <div
                                                 key={cell.id}
-                                                className="px-0 py-0 border-r border-border h-full flex items-center outline-none cursor-text shrink-0 select-text"
+                                                className="px-0 py-0 border-r border-slate-100 h-full flex items-center outline-none cursor-text shrink-0 select-text"
                                                 style={{ width: cell.column.getSize() }}
                                                 tabIndex={0}
                                             >
@@ -776,6 +784,20 @@ export function DataTable({
                             </DropdownMenu>
                         )
                     })}
+                    {/* Add row at the bottom */}
+                    <div
+                        className="flex absolute left-0 w-full border-b border-slate-100 bg-background items-center group cursor-pointer hover:bg-slate-50 transition-colors"
+                        style={{
+                            height: `35px`,
+                            width: `${table.getTotalSize()}px`,
+                            top: `${rowVirtualizer.getTotalSize()}px`,
+                        }}
+                        onClick={() => handleInsertRow(rows.length - 1)}
+                    >
+                        <div className="flex items-center justify-center p-2 text-slate-400 group-hover:text-blue-600 transition-colors">
+                            <Plus className="h-4 w-4" />
+                        </div>
+                    </div>
                 </div>
             </div>
             {/* AI Analysis Popup */}
@@ -785,15 +807,11 @@ export function DataTable({
                         <div className={cn(
                             "flex items-center justify-between p-5 border-b",
                             aiAnalysisResult.includes("PASS") ? "bg-green-500/10 border-green-500/20" :
-                                aiAnalysisResult.includes("FAIL") ? "bg-red-500/10 border-red-500/20" : "bg-muted/30"
+                                aiAnalysisResult.includes("FAIL") ? "bg-red-500/10 border-red-500/20" : "bg-blue-500/10 border-blue-500/20"
                         )}>
                             <div className="flex items-center gap-3">
-                                <div className={cn(
-                                    "p-2 rounded-lg",
-                                    aiAnalysisResult.includes("PASS") ? "bg-green-500 text-white" :
-                                        aiAnalysisResult.includes("FAIL") ? "bg-red-500 text-white" : "bg-primary text-primary-foreground"
-                                )}>
-                                    <FileText className="w-5 h-5" />
+                                <div className="p-2 bg-blue-50 rounded-xl">
+                                    <CheckSquare className="h-4 w-4 text-blue-600" />
                                 </div>
                                 <div>
                                     <h3 className="text-lg font-bold">AI Compliance Report</h3>
@@ -817,7 +835,7 @@ export function DataTable({
                                         return <div key={i} className="text-red-600 dark:text-red-400 font-bold text-lg mb-4">{line}</div>
                                     }
                                     if (line.startsWith('🔍') || line.startsWith('📍') || line.startsWith('✍️')) {
-                                        return <div key={i} className="font-semibold text-amber-600 mt-6 mb-2 flex items-center gap-2">{line}</div>
+                                        return <div key={i} className="font-semibold text-blue-600 mt-6 mb-2 flex items-center gap-2">{line}</div>
                                     }
                                     return <div key={i} className="mb-1">{line}</div>
                                 })}
@@ -829,7 +847,7 @@ export function DataTable({
                             </div>
                             <button
                                 onClick={() => setAiAnalysisResult(null)}
-                                className="px-8 py-2.5 bg-amber-600 text-white rounded-lg font-semibold hover:ring-2 ring-amber-500/20 transition-all shadow-lg active:scale-95"
+                                className="px-8 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:ring-2 ring-blue-500/20 transition-all shadow-lg active:scale-95"
                             >
                                 Done
                             </button>
@@ -876,7 +894,7 @@ export function DataTable({
                                         <div className="bg-black/20 backdrop-blur-2xl rounded-3xl px-8 py-6 border border-white/10 flex items-center justify-between text-left group hover:bg-black/30 transition-all shadow-lg active:scale-95">
                                             <div className="flex items-center gap-5">
                                                 <div className="p-3 bg-amber-500/20 rounded-xl">
-                                                    <IdCard className="w-6 h-6 text-amber-300 shadow-sm" />
+                                                    <ChevronDown className="ml-2 h-3.5 w-3.5 text-slate-400 opacity-70" />
                                                 </div>
                                                 <div className="flex flex-col">
                                                     <span className="text-xs font-black uppercase tracking-widest text-amber-100/60 leading-none mb-1">Digital Key</span>
