@@ -14,7 +14,7 @@ import {
 import { useVirtualizer } from "@tanstack/react-virtual"
 // Import server action
 import { uploadFile } from "@/app/actions/upload"
-import { updateRowData } from "@/app/actions/rows"
+import { updateRowData, createRow, deleteRows } from "@/app/actions/rows"
 import { renameColumn } from "@/app/actions/sheets"
 import { GridColumn, GridRow } from "./types"
 import { cn } from "@/lib/utils"
@@ -45,7 +45,8 @@ import {
     UserPlus,
     Hash as AutoNumberIcon,
     Maximize2,
-    IdCard
+    IdCard,
+    Trash2
 } from "lucide-react"
 
 import {
@@ -54,6 +55,12 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Textarea } from "@/components/ui/textarea"
 
 // Editable cell renderer
@@ -311,7 +318,7 @@ const EditableCell = ({
                 <div className="relative group/cell w-full h-full flex items-center overflow-hidden">
                     <input
                         className={cn(
-                            "w-full bg-transparent outline-none px-2 text-sm h-full",
+                            "flex-1 w-0 bg-transparent outline-none px-2 text-sm h-full",
                             isPatientNameColumn && "font-medium text-amber-700"
                         )}
                         value={value as string}
@@ -638,13 +645,25 @@ export function DataTable({
         meta: {
             updateData,
             openProfile,
+            deleteRows,
         },
+        columnResizeMode: "onChange",
         onSortingChange: setSorting,
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
         getRowId: (row, index) => index.toString(), // Important for indices in rowSelection
     })
+
+    const handleInsertRow = async (index: number) => {
+        const res = await createRow(sheetId, {})
+        if (res.success) {
+            // Update local state to reflect the new row immediately
+            const newData = [...data]
+            newData.splice(index + 1, 0, res.row as any)
+            setData(newData)
+        }
+    }
 
     // Virtualization
     const parentRef = React.useRef<HTMLDivElement>(null)
@@ -677,7 +696,7 @@ export function DataTable({
                             {headerGroup.headers.map(header => (
                                 <div
                                     key={header.id}
-                                    className="flex items-center px-3 py-2 border-r border-[#eeb44c] h-9 shrink-0 bg-[#ffd66b] hover:bg-[#fccb4f] transition-colors"
+                                    className="relative flex items-center px-3 py-2 border-r border-[#eeb44c] h-9 shrink-0 bg-[#ffd66b] hover:bg-[#fccb4f] transition-colors group"
                                     style={{ width: header.getSize() }}
                                 >
                                     {header.isPlaceholder
@@ -707,28 +726,54 @@ export function DataTable({
                     {rowVirtualizer.getVirtualItems().map((virtualRow) => {
                         const row = rows[virtualRow.index]
                         return (
-                            <div
-                                key={virtualRow.index}
-                                className={cn(
-                                    "flex absolute top-0 left-0 w-full border-b hover:bg-muted/50 transition-colors bg-background items-center group",
-                                    virtualRow.index % 2 === 0 ? "bg-background" : "bg-muted/10"
-                                )}
-                                style={{
-                                    height: `${virtualRow.size}px`,
-                                    transform: `translateY(${virtualRow.start}px)`,
-                                }}
-                            >
-                                {row.getVisibleCells().map((cell) => (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
                                     <div
-                                        key={cell.id}
-                                        className="px-0 py-0 border-r border-border h-full flex items-center outline-none focus-within:ring-2 focus-within:ring-primary focus-within:-outline-offset-2 cursor-text shrink-0 select-text"
-                                        style={{ width: cell.column.getSize() }}
-                                        tabIndex={0}
+                                        key={virtualRow.index}
+                                        className={cn(
+                                            "flex absolute top-0 left-0 w-full border-b hover:bg-muted/50 transition-colors bg-background items-center group cursor-context-menu",
+                                            virtualRow.index % 2 === 0 ? "bg-background" : "bg-muted/10"
+                                        )}
+                                        style={{
+                                            height: `${virtualRow.size}px`,
+                                            transform: `translateY(${virtualRow.start}px)`,
+                                        }}
+                                        onContextMenu={(e) => {
+                                            // We don't need to prevent default here if we use DropdownMenu as triggered by right click
+                                            // But DropdownMenuTrigger asChild usually handles clicks. 
+                                            // Standard Shadcn Dropdown doesn't support right click out of box easily without a specialized component.
+                                            // We will simulate it by ensuring the Trigger covers the row.
+                                        }}
                                     >
-                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                        {row.getVisibleCells().map((cell) => (
+                                            <div
+                                                key={cell.id}
+                                                className="px-0 py-0 border-r border-border h-full flex items-center outline-none cursor-text shrink-0 select-text"
+                                                style={{ width: cell.column.getSize() }}
+                                                tabIndex={0}
+                                            >
+                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                            </div>
+                                        ))}
                                     </div>
-                                ))}
-                            </div>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="w-48 bg-white">
+                                    <DropdownMenuItem
+                                        className="gap-2 cursor-pointer"
+                                        onClick={() => handleInsertRow(virtualRow.index)}
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                        <span>Insert Row Below</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        className="gap-2 text-destructive cursor-pointer"
+                                        onClick={() => table.options.meta?.deleteRows?.([row.original.id])}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                        <span>Delete Row</span>
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         )
                     })}
                 </div>
