@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache"
 import { updateRowData } from "./rows"
 
 export interface CalendarEvent {
-    id: string // row id
+    id: string // unique event id
+    pureRowId?: string // original row id
     title: string
     start: Date
     end: Date
@@ -24,41 +25,48 @@ export async function getCalendarEvents(): Promise<CalendarEvent[]> {
 
         for (const sheet of sheets) {
             const sheetNameLower = sheet.name.toLowerCase()
-            let dateColumn = null
             let nameColumn = sheet.columns.find(c =>
                 c.name.toLowerCase() === "name" ||
                 c.name.toLowerCase() === "patient name" ||
                 c.name.toLowerCase().includes("patient")
             )
 
-            if (sheetNameLower.includes("cgm pts") || sheetNameLower.includes("cgm pst")) {
-                dateColumn = sheet.columns.find(c => c.name.toLowerCase() === "refill due")
-                if (!dateColumn) dateColumn = sheet.columns.find(c => c.name.toLowerCase() === "delivered date")
-            } else {
-                dateColumn = sheet.columns.find(c =>
-                    c.name.toLowerCase() === "delivered date" ||
-                    c.name.toLowerCase() === "date delivered"
-                )
-            }
+            // Priority Columns
+            const refillCol = sheet.columns.find(c => c.name.toLowerCase() === "refill due")
+            const deliveredCol = sheet.columns.find(c =>
+                c.name.toLowerCase() === "delivered date" ||
+                c.name.toLowerCase() === "date delivered"
+            )
 
-            if (dateColumn) {
+            if (refillCol || deliveredCol) {
                 const rows = await prisma.row.findMany({ where: { sheetId: sheet.id } })
                 for (const row of rows) {
                     const data = row.data as Record<string, any>
-                    const dateValue = data[dateColumn.id]
-                    const nameValue = nameColumn ? data[nameColumn.id] : "Untitled"
 
-                    if (dateValue) {
+                    // Priority: Refill Due, then Delivered Date
+                    let activeCol = null
+                    if (refillCol && data[refillCol.id]) {
+                        activeCol = refillCol
+                    } else if (deliveredCol && data[deliveredCol.id]) {
+                        activeCol = deliveredCol
+                    }
+
+                    if (activeCol) {
+                        const dateValue = data[activeCol.id]
                         const date = new Date(dateValue)
                         if (!isNaN(date.getTime())) {
+                            const isRefill = activeCol.name.toLowerCase().includes("refill")
+                            const nameValue = nameColumn ? data[nameColumn.id] : "Unnamed"
+
                             events.push({
-                                id: row.id,
-                                title: `Refill: ${String(nameValue || "Unnamed")}`,
+                                id: `${row.id}:date:${activeCol.id}`,
+                                pureRowId: row.id,
+                                title: `${isRefill ? 'Refill' : 'Delivered'}: ${String(nameValue || "Unnamed")}`,
                                 start: date,
                                 end: date,
                                 allDay: true,
                                 sheetId: sheet.id,
-                                dateColumnId: dateColumn.id,
+                                dateColumnId: activeCol.id,
                                 fullData: data,
                                 columns: sheet.columns.map(c => ({ id: c.id, name: c.name }))
                             })
@@ -76,8 +84,9 @@ export async function getCalendarEvents(): Promise<CalendarEvent[]> {
 
 
 
-export async function updateEventDate(rowId: string, sheetId: string, dateColumnId: string, newDate: Date) {
+export async function updateEventDate(combinedId: string, sheetId: string, dateColumnId: string, newDate: Date) {
     try {
+        const rowId = combinedId.split(':date:')[0]
         const result = await updateRowData(rowId, {
             [dateColumnId]: newDate.toISOString()
         }, sheetId)

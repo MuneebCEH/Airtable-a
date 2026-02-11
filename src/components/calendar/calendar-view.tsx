@@ -143,7 +143,13 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
     const [isDialogOpen, setIsDialogOpen] = useState(false)
 
     useEffect(() => {
-        setEvents(initialEvents)
+        // Convert serialized string dates back to Date objects for the calendar
+        const formatted = initialEvents.map(e => ({
+            ...e,
+            start: new Date(e.start),
+            end: new Date(e.end)
+        }))
+        setEvents(formatted)
     }, [initialEvents])
 
     const onEventDrop = useCallback(
@@ -230,7 +236,7 @@ export function CalendarView({ initialEvents }: CalendarViewProps) {
                                     <p className="text-[11px] font-[900] text-slate-300 uppercase tracking-[0.3em] leading-none">Management v3.5</p>
                                 </div>
                                 <DialogTitle className="text-5xl font-[1000] text-slate-900 tracking-tighter leading-none mb-3 truncate">
-                                    {selectedEvent?.title.replace('Refill: ', '')}
+                                    {selectedEvent?.title.replace(/^(Refill|Delivered): /, '')}
                                 </DialogTitle>
                                 <DialogDescription className="text-slate-400 font-bold text-[14px] uppercase tracking-[0.2em] flex items-center gap-5 flex-wrap">
                                     <div className="flex items-center gap-3">
