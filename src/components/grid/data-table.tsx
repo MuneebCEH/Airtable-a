@@ -10,12 +10,17 @@ import {
     flexRender,
     SortingState,
     VisibilityState,
-    RowData
+    RowData,
+    getGroupedRowModel,
+    getExpandedRowModel,
+    GroupingState,
+    ExpandedState
 } from "@tanstack/react-table"
 
 import {
     Users,
     ChevronRight,
+    ChevronDown,
     MessageSquare,
     Settings2,
     Share2
@@ -56,7 +61,6 @@ import {
     FileArchive,
     Hash,
     Type,
-    ChevronDown,
     CheckSquare,
     Clock,
     UserPlus,
@@ -465,6 +469,8 @@ interface DataTableProps {
     setSorting: (val: any) => void
     columnVisibility: VisibilityState
     setColumnVisibility: (val: any) => void
+    grouping: GroupingState
+    setGrouping: (val: any) => void
 }
 
 export function DataTable({
@@ -479,9 +485,35 @@ export function DataTable({
     sorting,
     setSorting,
     columnVisibility,
-    setColumnVisibility
+    setColumnVisibility,
+    grouping,
+    setGrouping
 }: DataTableProps) {
     const [data, setData] = React.useState(initialData)
+    const [expanded, setExpanded] = React.useState<ExpandedState>(true) // True means all expanded by default
+
+    // Help format grouping values (especially dates)
+    const formatGroupingValue = (value: any, columnId: string) => {
+        if (value === null || value === undefined || value === "") return "Empty"
+
+        const column = initialColumns.find(c => c.id === columnId)
+        if (column?.type === 'DATE') {
+            try {
+                const date = new Date(value)
+                if (!isNaN(date.getTime())) {
+                    return date.toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                    })
+                }
+            } catch (e) {
+                return String(value)
+            }
+        }
+        return String(value)
+    }
 
     // Ref to track processing rows to avoid double submissions if needed
     // but state update is simple enough
@@ -653,11 +685,17 @@ export function DataTable({
             rowSelection,
             globalFilter,
             columnVisibility,
+            grouping,
+            expanded,
         },
         enableRowSelection: isSelectionMode,
         onRowSelectionChange: setRowSelection,
         onGlobalFilterChange: setGlobalFilter,
         onColumnVisibilityChange: setColumnVisibility,
+        onGroupingChange: setGrouping,
+        onExpandedChange: setExpanded,
+        getExpandedRowModel: getExpandedRowModel(),
+        getGroupedRowModel: getGroupedRowModel(),
         meta: {
             updateData,
             openProfile,
@@ -744,20 +782,72 @@ export function DataTable({
                 >
                     {rowVirtualizer.getVirtualItems().map((virtualRow) => {
                         const row = rows[virtualRow.index]
+                        if (!row) return null
+
+                        const isGrouped = row.getIsGrouped()
+
+                        if (isGrouped) {
+                            const groupColumnId = row.groupingColumnId || (row as any).columnId
+                            const groupValue = row.groupingValue || (row as any).value
+
+                            return (
+                                <div
+                                    key={virtualRow.index}
+                                    className="flex absolute left-0 border-b border-slate-200 bg-slate-50/95 items-center z-10 shadow-sm"
+                                    style={{
+                                        height: `${virtualRow.size}px`,
+                                        top: `${virtualRow.start}px`,
+                                        width: `${table.getTotalSize()}px`,
+                                        minWidth: '100%'
+                                    }}
+                                >
+                                    <div className="sticky left-0 flex items-center h-full z-20">
+                                        <button
+                                            onClick={() => row.toggleExpanded()}
+                                            className="flex items-center gap-2 px-4 py-1.5 hover:bg-slate-200/50 transition-colors h-full text-xs font-bold text-slate-700 no-underline outline-none"
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                {row.getIsExpanded() ? (
+                                                    <ChevronDown className="h-4 w-4 text-amber-600" />
+                                                ) : (
+                                                    <ChevronRight className="h-4 w-4 text-slate-400" />
+                                                )}
+                                                <span className="uppercase text-[9px] text-slate-400 font-black tracking-widest mr-1">
+                                                    {initialColumns.find(c => c.id === groupColumnId)?.name || 'Group'}
+                                                </span>
+                                                <span className="text-[12px] font-semibold text-slate-800">
+                                                    {formatGroupingValue(groupValue, groupColumnId)}
+                                                </span>
+                                                <span className="bg-slate-200/60 text-slate-600 px-2 py-0.5 rounded-full text-[10px] ml-2 font-medium">
+                                                    {row.subRows.length}
+                                                </span>
+                                            </div>
+                                        </button>
+                                    </div>
+                                    {/* Line spanning the rest of the group header */}
+                                    <div className="flex-1 h-px bg-slate-200/50 ml-4 mr-8" />
+                                </div>
+                            )
+                        }
+
                         return (
                             <div
                                 key={virtualRow.index}
                                 className={cn(
-                                    "flex absolute left-0 w-full border-b border-slate-100 hover:bg-slate-50/80 transition-colors bg-background items-center group",
+                                    "flex absolute left-0 border-b border-slate-100 hover:bg-slate-50/80 transition-colors bg-background items-center group",
                                     virtualRow.index % 2 === 0 ? "bg-background" : "bg-slate-50/30"
                                 )}
                                 style={{
                                     height: `${virtualRow.size}px`,
                                     top: `${virtualRow.start}px`,
+                                    width: `${table.getTotalSize()}px`,
                                 }}
                             >
                                 {row.getVisibleCells().map((cell, index) => {
                                     const isFirstColumn = index === 0
+
+                                    // If row is grouped, cells might be empty except the grouped one, 
+                                    // but usually we want to show the data in rows UNDER the group.
 
                                     return (
                                         <div

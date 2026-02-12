@@ -17,7 +17,8 @@ import {
     CheckCircle2,
     ArrowRightCircle,
     Eye,
-    EyeOff
+    EyeOff,
+    Layers
 } from "lucide-react"
 import {
     DropdownMenu,
@@ -52,6 +53,8 @@ interface GridToolbarProps {
     setColumnVisibility: (val: VisibilityState) => void
     sorting: SortingState
     setSorting: (val: any) => void
+    grouping: any[]
+    setGrouping: (val: any) => void
 }
 
 export function GridToolbar({
@@ -66,7 +69,9 @@ export function GridToolbar({
     columnVisibility,
     setColumnVisibility,
     sorting,
-    setSorting
+    setSorting,
+    grouping,
+    setGrouping
 }: GridToolbarProps) {
     const router = useRouter()
     const fileInputRef = React.useRef<HTMLInputElement>(null)
@@ -261,6 +266,37 @@ export function GridToolbar({
                         >
                             <DropdownMenuRadioItem value="" className="text-xs">Default (Recent)</DropdownMenuRadioItem>
                             {columns.slice(0, 8).map(col => (
+                                <DropdownMenuRadioItem key={col.id} value={col.id} className="text-xs">
+                                    {col.name}
+                                </DropdownMenuRadioItem>
+                            ))}
+                        </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className={cn(
+                                "h-7 gap-1.5 px-2 text-slate-600 hover:bg-slate-100",
+                                grouping.length > 0 && "text-amber-600 bg-amber-50 hover:bg-amber-100 border border-amber-200"
+                            )}
+                        >
+                            <Layers className="h-3.5 w-3.5" />
+                            <span className="text-[11px] font-medium">Group</span>
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-56 bg-white">
+                        <DropdownMenuLabel className="text-xs">Group by Column</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuRadioGroup
+                            value={grouping[0]}
+                            onValueChange={(val) => setGrouping(val ? [val] : [])}
+                        >
+                            <DropdownMenuRadioItem value="" className="text-xs">No Grouping</DropdownMenuRadioItem>
+                            {columns.filter(col => col.type !== 'FILE').slice(0, 12).map(col => (
                                 <DropdownMenuRadioItem key={col.id} value={col.id} className="text-xs">
                                     {col.name}
                                 </DropdownMenuRadioItem>

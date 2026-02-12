@@ -40,6 +40,15 @@ export function GridView({ project, sheets, columns, rows, activeSheetId }: Grid
     const [globalFilter, setGlobalFilter] = React.useState("")
     const [sorting, setSorting] = React.useState<SortingState>([])
     const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
+    const [grouping, setGrouping] = React.useState<any[]>([])
+
+    // Default grouping by DOS if available
+    React.useEffect(() => {
+        const dosColumn = columns.find(c => c.name.toLowerCase() === 'dos')
+        if (dosColumn && grouping.length === 0) {
+            setGrouping([dosColumn.id])
+        }
+    }, [columns])
 
     const [isPending, startTransition] = React.useTransition()
 
@@ -114,6 +123,8 @@ export function GridView({ project, sheets, columns, rows, activeSheetId }: Grid
                     setColumnVisibility={setColumnVisibility}
                     sorting={sorting}
                     setSorting={setSorting}
+                    grouping={grouping}
+                    setGrouping={setGrouping}
                 />
             </div>
 
@@ -132,6 +143,8 @@ export function GridView({ project, sheets, columns, rows, activeSheetId }: Grid
                     setSorting={setSorting}
                     columnVisibility={columnVisibility}
                     setColumnVisibility={setColumnVisibility}
+                    grouping={grouping}
+                    setGrouping={setGrouping}
                 />
             </div>
         </div>
