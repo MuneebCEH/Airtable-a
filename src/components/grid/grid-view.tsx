@@ -50,6 +50,16 @@ export function GridView({ project, sheets, columns, rows, activeSheetId }: Grid
         }
     }, [columns])
 
+    // Ensure sorting matches grouping so similar dates are merged into one group
+    React.useEffect(() => {
+        if (grouping.length > 0) {
+            const groupColId = grouping[0]
+            if (!sorting.some(s => s.id === groupColId)) {
+                setSorting([{ id: groupColId, desc: true }])
+            }
+        }
+    }, [grouping, sorting])
+
     const [isPending, startTransition] = React.useTransition()
 
     const handleSheetChange = (sheetId: string) => {

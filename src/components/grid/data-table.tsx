@@ -196,13 +196,11 @@ const EditableCell = ({
             }
 
             return (
-                <div className="relative w-full h-full flex items-center">
+                <div className="relative w-full h-full flex items-center group/date overflow-hidden">
                     <input
-                        type="date"
-                        className={cn(
-                            "w-full bg-transparent outline-none text-xs text-slate-700 px-2 h-full cursor-pointer",
-                            !value && "text-transparent" // Hide the dd/mm/yyyy native placeholder
-                        )}
+                        type="text"
+                        placeholder="" // No dd/mm/yyyy placeholder
+                        className="flex-1 min-w-0 bg-transparent outline-none text-xs text-slate-700 px-2 h-full"
                         value={value as string || ""}
                         onChange={(e) => setValue(e.target.value)}
                         onBlur={onBlur}
@@ -212,11 +210,19 @@ const EditableCell = ({
                             }
                         }}
                     />
-                    {!value && (
-                        <div className="absolute inset-0 pointer-events-none flex items-center px-2 text-xs text-muted-foreground/0">
-                            {/* Empty space */}
-                        </div>
-                    )}
+                    <div className="relative flex items-center justify-center shrink-0 w-7 h-full mr-1">
+                        <CalendarIcon className="h-3.5 w-3.5 text-slate-400 group-hover/date:text-amber-500 transition-colors pointer-events-none" />
+                        <input
+                            type="date"
+                            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                            value={value && !isNaN(new Date(value as string).getTime()) ? new Date(value as string).toISOString().split('T')[0] : ""}
+                            onChange={(e) => {
+                                const newValue = e.target.value
+                                setValue(newValue)
+                                table.options.meta?.updateData(row.id, column.id, newValue)
+                            }}
+                        />
+                    </div>
                 </div>
             )
         case 'SELECT':
@@ -497,7 +503,7 @@ export function DataTable({
 
     // Help format grouping values (especially dates)
     const formatGroupingValue = (value: any, columnId: string) => {
-        if (value === null || value === undefined || value === "") return "Empty"
+        if (value === null || value === undefined || value === "" || value === "undefined") return "Empty"
 
         const column = initialColumns.find(c => c.id === columnId)
         if (column?.type === 'DATE') {
