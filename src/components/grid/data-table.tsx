@@ -23,18 +23,43 @@ import {
     ChevronDown,
     MessageSquare,
     Settings2,
-    Share2
+    Share2,
+    GripVertical,
+    Maximize2,
+    Type,
+    Hash,
+    Paperclip,
+    CheckSquare,
+    User,
+    Calendar as CalendarIcon,
+    X,
+    MoreHorizontal,
+    Plus,
+    ArrowUpDown,
+    Check,
+    FileText,
+    File,
+    Image as ImageIcon,
+    Music,
+    Video,
+    FileJson,
+    FileCode,
+    FileArchive,
+    Clock,
+    UserPlus,
+    Hash as AutoNumberIcon,
+    IdCard,
 } from "lucide-react"
 
 declare module "@tanstack/react-table" {
     interface TableMeta<TData extends RowData> {
-        updateData: (rowIndex: number, columnId: string, value: any) => void
+        updateData: (rowId: string, columnId: string, value: any) => void
         openProfile: (row: any) => void
         deleteRows: (rowIds: string[]) => void
     }
 }
+
 import { useVirtualizer } from "@tanstack/react-virtual"
-// Import server action
 import { uploadFile } from "@/app/actions/upload"
 import { updateRowData, createRow, deleteRows } from "@/app/actions/rows"
 import { renameColumn } from "@/app/actions/sheets"
@@ -42,33 +67,6 @@ import { GridColumn, GridRow } from "./types"
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-    Plus,
-    ArrowUpDown,
-    Calendar as CalendarIcon,
-    Check,
-    FileText,
-    MoreHorizontal,
-    Paperclip,
-    User,
-    File,
-    Image as ImageIcon,
-    Music,
-    Video,
-    X,
-    FileJson,
-    FileCode,
-    FileArchive,
-    Hash,
-    Type,
-    CheckSquare,
-    Clock,
-    UserPlus,
-    Hash as AutoNumberIcon,
-    Maximize2,
-    IdCard,
-    Trash2
-} from "lucide-react"
 
 import {
     Dialog,
@@ -109,17 +107,17 @@ const EditableCell = ({
     }, [initialValue])
 
     const onBlur = async () => {
-        table.options.meta?.updateData(row.index, column.id, value)
+        table.options.meta?.updateData(row.id, column.id, value)
     }
 
     const onSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         setValue(e.target.value)
-        table.options.meta?.updateData(row.index, column.id, e.target.value)
+        table.options.meta?.updateData(row.id, column.id, e.target.value)
     }
 
     const onCheckboxChange = (checked: boolean) => {
         setValue(checked)
-        table.options.meta?.updateData(row.index, column.id, checked)
+        table.options.meta?.updateData(row.id, column.id, checked)
     }
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -147,7 +145,7 @@ const EditableCell = ({
 
         const updatedValue = [...currentFiles, ...newFiles]
         setValue(updatedValue)
-        table.options.meta?.updateData(row.index, column.id, updatedValue)
+        table.options.meta?.updateData(row.id, column.id, updatedValue)
         setIsUploading(false)
 
         // Reset input
@@ -206,9 +204,12 @@ const EditableCell = ({
                             !value && "text-transparent" // Hide the dd/mm/yyyy native placeholder
                         )}
                         value={value as string || ""}
-                        onChange={(e) => {
-                            setValue(e.target.value)
-                            table.options.meta?.updateData(row.index, column.id, e.target.value)
+                        onChange={(e) => setValue(e.target.value)}
+                        onBlur={onBlur}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                (e.target as HTMLInputElement).blur()
+                            }
                         }}
                     />
                     {!value && (
@@ -248,7 +249,7 @@ const EditableCell = ({
                 const updatedFiles = [...files]
                 updatedFiles.splice(index, 1)
                 setValue(updatedFiles)
-                table.options.meta?.updateData(row.index, column.id, updatedFiles)
+                table.options.meta?.updateData(row.id, column.id, updatedFiles)
             }
 
             return (
@@ -491,6 +492,8 @@ export function DataTable({
 }: DataTableProps) {
     const [data, setData] = React.useState(initialData)
     const [expanded, setExpanded] = React.useState<ExpandedState>(true) // True means all expanded by default
+    const [draggedRowId, setDraggedRowId] = React.useState<string | null>(null)
+    const [dropTargetGroupId, setDropTargetGroupId] = React.useState<string | null>(null)
 
     // Help format grouping values (especially dates)
     const formatGroupingValue = (value: any, columnId: string) => {
@@ -525,7 +528,7 @@ export function DataTable({
 
         if (check < MIN_ROWS) {
             const extraRows = Array.from({ length: MIN_ROWS - check }).map((_, i) => ({
-                id: `ghost-${crypto.randomUUID()}-${i}`,
+                id: `ghost-${i}`,
             }))
             setData([...currentData, ...extraRows])
         } else {
@@ -600,20 +603,21 @@ export function DataTable({
 
     const [aiAnalysisResult, setAiAnalysisResult] = React.useState<string | null>(null)
 
-    const updateData = (rowIndex: number, columnId: string, value: any) => {
+    const updateData = (rowId: string, columnId: string, value: any) => {
         if (isSelectionMode) return // Prevent editing in selection mode
 
         setData((old) => {
+            const rowIndex = old.findIndex(r => r.id === rowId)
+            if (rowIndex === -1) return old
+
             const currentRow = old[rowIndex]
             if (!currentRow) return old
 
-            const rowId = currentRow.id
-
             // Optimistically update local state first
-            const newData = old.map((row, index) => {
-                if (index === rowIndex) {
+            const newData = old.map((row) => {
+                if (row.id === rowId) {
                     return {
-                        ...old[rowIndex]!,
+                        ...row,
                         [columnId]: value,
                     }
                 }
@@ -621,11 +625,11 @@ export function DataTable({
             })
 
             // Trigger server update
-            if (rowId) {
+            if (rowId && !rowId.startsWith('ghost-')) {
                 updateRowData(rowId, { [columnId]: value }, sheetId).then(res => {
                     if (res.success && res.row) {
-                        setData(prev => prev.map((r, idx) => {
-                            if (idx === rowIndex) {
+                        setData(prev => prev.map((r) => {
+                            if (r.id === rowId) {
                                 return {
                                     ...r,
                                     id: res.row.id,
@@ -665,10 +669,9 @@ export function DataTable({
     // Sync TanStack row selection with our selectedRowIds
     React.useEffect(() => {
         const ids = Object.keys(rowSelection)
-            .map(idx => data[Number(idx)]?.id)
             .filter(id => id && !id.startsWith("ghost-"))
-        setSelectedRowIds(ids as string[])
-    }, [rowSelection, data, setSelectedRowIds])
+        setSelectedRowIds(ids)
+    }, [rowSelection, setSelectedRowIds])
 
     // Reset selection when exiting mode
     React.useEffect(() => {
@@ -696,6 +699,7 @@ export function DataTable({
         onExpandedChange: setExpanded,
         getExpandedRowModel: getExpandedRowModel(),
         getGroupedRowModel: getGroupedRowModel(),
+        autoResetExpanded: false,
         meta: {
             updateData,
             openProfile,
@@ -706,7 +710,7 @@ export function DataTable({
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
-        getRowId: (row, index) => index.toString(), // Important for indices in rowSelection
+        getRowId: (row) => row.id,
     })
 
     const handleInsertRow = async (index: number) => {
@@ -793,12 +797,28 @@ export function DataTable({
                             return (
                                 <div
                                     key={virtualRow.index}
-                                    className="flex absolute left-0 border-b border-slate-200 bg-slate-50/95 items-center z-10 shadow-sm"
+                                    className={cn(
+                                        "flex absolute left-0 border-b border-slate-200 bg-slate-50/95 items-center z-10 shadow-sm transition-all",
+                                        dropTargetGroupId === groupValue && "ring-2 ring-amber-500 ring-inset bg-amber-50/50"
+                                    )}
                                     style={{
                                         height: `${virtualRow.size}px`,
                                         top: `${virtualRow.start}px`,
                                         width: `${table.getTotalSize()}px`,
                                         minWidth: '100%'
+                                    }}
+                                    onDragOver={(e) => {
+                                        e.preventDefault()
+                                        setDropTargetGroupId(String(groupValue))
+                                    }}
+                                    onDragLeave={() => setDropTargetGroupId(null)}
+                                    onDrop={(e) => {
+                                        e.preventDefault()
+                                        if (draggedRowId) {
+                                            updateData(draggedRowId, groupColumnId, groupValue)
+                                        }
+                                        setDraggedRowId(null)
+                                        setDropTargetGroupId(null)
                                     }}
                                 >
                                     <div className="sticky left-0 flex items-center h-full z-20">
@@ -859,6 +879,17 @@ export function DataTable({
                                             style={{ width: cell.column.getSize() }}
                                             tabIndex={0}
                                         >
+                                            {isFirstColumn && (
+                                                <div
+                                                    draggable
+                                                    onDragStart={() => setDraggedRowId(row.id)}
+                                                    onDragEnd={() => setDraggedRowId(null)}
+                                                    className="absolute left-0 cursor-grab active:cursor-grabbing p-1 opacity-0 group-hover:opacity-100 transition-opacity z-50 hover:text-amber-600"
+                                                    title="Drag to change group"
+                                                >
+                                                    <GripVertical className="h-3 w-3" />
+                                                </div>
+                                            )}
                                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                         </div>
                                     )
